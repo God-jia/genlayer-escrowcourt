@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EscrowCourt — milestone escrow with on-chain adjudication</title>
+    <meta
+      name="description"
+      content="EscrowCourt is a GenLayer dApp for milestone escrow: a client funds a job, a freelancer delivers, and disputed milestones are adjudicated on-chain against the acceptance criteria."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="mark">EC</span>
+        <div>
+          <h1>EscrowCourt</h1>
+          <p>Milestone escrow where the acceptance criteria are the judge.</p>
+        </div>
+      </div>
+      <div class="chain">
+        <label>
+          Network
+          <select id="network"></select>
+        </label>
+        <label>
+          Contract
+          <input id="contract" placeholder="0x…" spellcheck="false" />
+        </label>
+        <button id="saveContract" class="ghost">Save</button>
+        <button id="connect" class="primary">Connect wallet</button>
+        <span id="walletState" class="pill">wallet: not connected</span>
+        <span id="contractState" class="pill">not set</span>
+      </div>
+    </header>
+
+    <main>
+      <nav class="tabs">
+        <button class="tab active" data-tab="post">Post a job</button>
+        <button class="tab" data-tab="job">Job workspace</button>
+        <button class="tab" data-tab="adjudicate">Adjudicate</button>
+        <button class="tab" data-tab="track">Track record</button>
+      </nav>
+
+      <section id="panel-post" class="panel">
+        <h2>Post a job</h2>
+        <p class="hint">
+          You become the client. The brief, the deliverable location, and every
+          milestone share are frozen on-chain at creation, so a later dispute is
+          judged against what both sides actually agreed to.
+        </p>
+        <div class="grid">
+          <label>
+            Title
+            <input id="pTitle" value="Landing page and API integration" />
+          </label>
+          <label>
+            Escrow amount (accounting units)
+            <input id="pAmount" type="number" min="1" step="1" value="100000" />
+          </label>
+        </div>
+        <label>
+          Brief
+          <textarea id="pBrief" rows="3">Build a responsive landing page for the product and wire the contact form to a working backend endpoint that stores every submission.</textarea>
+        </label>
+        <label>
+          Deliverable location (http/https)
+          <input id="pDeliverable" value="https://example.com/repo/spec" spellcheck="false" />
+        </label>
+        <label>
+          Milestones (JSON array, shares must total 10000 basis points)
+          <textarea id="pMilestones" rows="10" spellcheck="false"></textarea>
+        </label>
+        <button id="createJob" class="primary">Create job</button>
+        <output id="pOut" class="out"></output>
+      </section>
+
+      <section id="panel-job" class="panel" hidden>
+        <h2>Job workspace</h2>
+        <div class="row">
+          <label>
+            Job id
+            <input id="jId" type="number" min="0" step="1" value="0" />
+          </label>
+          <button id="loadJob" class="ghost">Load job</button>
+        </div>
+        <div id="jView" class="card"></div>
+
+        <h3>Freelancer</h3>
+        <div class="row">
+          <button id="acceptJob" class="primary">Accept job</button>
+          <label>
+            Milestone id
+            <input id="jMilestone" value="M1" />
+          </label>
+        </div>
+        <div class="row">
+          <label>
+            Evidence URL
+            <input id="jEvidence" value="https://example.com/repo/m1" spellcheck="false" />
+          </label>
+          <label>
+            Submission note
+            <input id="jNote" value="Delivered the milestone and pushed the code to the shared repository." />
+          </label>
+          <button id="submitMilestone" class="primary">Submit milestone</button>
+        </div>
+
+        <h3>Client decision</h3>
+        <div class="row">
+          <button id="approveMilestone" class="ok">Approve milestone</button>
+        </div>
+        <label>
+          Dispute claim (40-2000 characters)
+          <textarea id="jClaim" rows="3">The submitted page is missing the hero section and the form does not post anywhere, so the milestone is not complete.</textarea>
+        </label>
+        <div class="row">
+          <button id="disputeMilestone" class="warn">Dispute milestone</button>
+        </div>
+        <output id="jOut" class="out"></output>
+      </section>
+
+      <section id="panel-adjudicate" class="panel" hidden>
+        <h2>Adjudicate a disputed milestone</h2>
+        <p class="hint">
+          Anyone can trigger adjudication once a milestone is disputed.
+          Validators read the deliverable and the evidence, then classify every
+          acceptance criterion as met, unmet, or unclear. The settlement —
+          release, refund, or split — is derived in code from those
+          classifications, never chosen by the model.
+        </p>
+        <div class="row">
+          <label>
+            Job id
+            <input id="aId" type="number" min="0" step="1" value="0" />
+          </label>
+          <label>
+            Milestone id
+            <input id="aMilestone" value="M1" />
+          </label>
+          <button id="adjudicate" class="primary">Adjudicate</button>
+        </div>
+        <output id="aOut" class="out"></output>
+        <div id="aView" class="card"></div>
+      </section>
+
+      <section id="panel-track" class="panel" hidden>
+        <h2>Track record</h2>
+        <p class="hint">
+          Every settled milestone is counted per address, so a client can see
+          how a freelancer's milestones have been resolved and vice versa.
+        </p>
+        <div class="row">
+          <label>
+            Address
+            <input id="tAddress" placeholder="0x…" spellcheck="false" />
+          </label>
+          <button id="loadTrack" class="ghost">Load</button>
+          <button id="loadLedger" class="ghost">Load ledger</button>
+        </div>
+        <div id="tView" class="card"></div>
+      </section>
+    </main>
+
+    <div id="log" class="log" hidden></div>
+    <footer>
+      <p>
+        EscrowCourt keeps an on-chain settlement ledger and track record. It
+        does not move real value.
+      </p>
+    </footer>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
