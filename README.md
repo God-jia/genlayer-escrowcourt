@@ -22,6 +22,7 @@ classifications.
 | Contract | [`0xD6b0771b600A22b70D61d2Fd594Ca8F4F8E2D22f`](https://explorer-studio.genlayer.com/address/0xD6b0771b600A22b70D61d2Fd594Ca8F4F8E2D22f) |
 | Network | studionet (chain ID 61999) |
 | dApp | <https://god-jia.github.io/genlayer-escrowcourt/> |
+| Demo video | <https://god-jia.github.io/genlayer-escrowcourt/escrowcourt-demo.mp4> |
 | Deploy tx | [`0x9f480141…c8eca53f`](https://explorer-studio.genlayer.com/tx/0x9f48014128fac4193dbb26fd892c2544a780ed2584ba8c965f6e43aac8eca53f) |
 
 The full lifecycle below was executed against studionet with real validators, real web
@@ -88,6 +89,13 @@ Settlement ledger and per-address track record read back from the contract:
 
 Job #0 ends `completed` with both milestones settled — one by adjudication, one by the
 client.
+
+## Demo
+
+A 35-second walkthrough — posting the job, reading job #0 back from studionet, handing a
+dispute to the validators, the per-criterion ruling and the settlement ledger — is at
+[`docs/escrowcourt-demo.mp4`](docs/escrowcourt-demo.mp4), or streamed from the dApp URL
+above. Every frame is the real dApp talking to the deployed contract.
 
 ## Why this needs GenLayer
 
@@ -201,8 +209,9 @@ result — address, trace, final job state, ledger and reputation — to
 ```
 contracts/escrow_court.py        the Intelligent Contract
 tests/direct/test_escrow_court.py 24 direct-mode tests
-docs/                            the dApp (GitHub Pages root)
+docs/                            the dApp (GitHub Pages root) + the demo video
 tools/deploy_and_demo.py         deploy + full lifecycle on studionet
+tools/make_demo.py               compose the demo video from dApp screenshots
 ```
 
 ## License
