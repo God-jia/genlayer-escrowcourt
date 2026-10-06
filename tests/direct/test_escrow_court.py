@@ -37,15 +37,19 @@ def _deploy(direct_deploy):
     return direct_deploy("contracts/escrow_court.py")
 
 
-def _create(contract, direct_vm, sender, milestones=None, amount=AMOUNT):
+def _create(contract, direct_vm, sender, milestones=None, amount=AMOUNT, value=None):
     direct_vm.sender = sender
-    return contract.create_job(
-        "Landing page and API integration",
-        BRIEF,
-        DELIVERABLE_URL,
-        amount,
-        json.dumps(milestones if milestones is not None else MILESTONES),
-    )
+    direct_vm.value = amount if value is None else value
+    try:
+        return contract.create_job(
+            "Landing page and API integration",
+            BRIEF,
+            DELIVERABLE_URL,
+            amount,
+            json.dumps(milestones if milestones is not None else MILESTONES),
+        )
+    finally:
+        direct_vm.value = 0
 
 
 def _client(contract, job_id):
@@ -151,6 +155,25 @@ def test_create_rejects_thin_criterion(direct_vm, direct_deploy, direct_alice):
         _create(contract, direct_vm, direct_alice, milestones=thin)
 
 
+def test_create_escrows_the_amount(direct_vm, direct_deploy, direct_alice):
+    contract = _deploy(direct_deploy)
+    job_id = _create(contract, direct_vm, direct_alice)
+
+    record = json.loads(contract.get_job(job_id))
+    assert record["amount"] == AMOUNT
+    assert record["escrowed"] == AMOUNT
+
+
+def test_create_requires_exact_value(direct_vm, direct_deploy, direct_alice):
+    contract = _deploy(direct_deploy)
+
+    with direct_vm.expect_revert("Sent value must equal the escrow amount"):
+        _create(contract, direct_vm, direct_alice, value=AMOUNT - 1)
+
+    with direct_vm.expect_revert("Sent value must equal the escrow amount"):
+        _create(contract, direct_vm, direct_alice, value=0)
+
+
 # ----------------------------------------------------------------------- accept
 
 
@@ -173,14 +196,18 @@ def test_accept_twice_reverts(direct_vm, direct_deploy, direct_alice, direct_bob
         contract.accept_job(job_id)
 
 
-def test_cancel_open_job(direct_vm, direct_deploy, direct_alice):
+def test_cancel_open_job_refunds_the_client(direct_vm, direct_deploy, direct_alice):
     contract = _deploy(direct_deploy)
     job_id = _create(contract, direct_vm, direct_alice)
+    alice = _client(contract, job_id)
 
     direct_vm.sender = direct_alice
     contract.cancel_job(job_id)
 
-    assert json.loads(contract.get_job(job_id))["status"] == "cancelled"
+    record = json.loads(contract.get_job(job_id))
+    assert record["status"] == "cancelled"
+    assert record["escrowed"] == 0
+    assert contract.get_balance(alice) == AMOUNT
 
 
 def test_cancel_after_accept_reverts(direct_vm, direct_deploy, direct_alice, direct_bob):
@@ -255,6 +282,37 @@ def test_approve_releases_share_and_completes_job(
 
     reputation = json.loads(contract.get_reputation(bob))
     assert reputation["released"] == 2
+
+
+# -------------------------------------------------------------------- withdraw
+
+
+def test_withdraw_pays_out_and_zeroes_the_balance(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    contract = _deploy(direct_deploy)
+    job_id, _alice, bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+    _submit(contract, direct_vm, direct_bob, job_id, "M1")
+
+    direct_vm.sender = direct_alice
+    contract.approve_milestone(job_id, "M1")
+    assert contract.get_balance(bob) == 60000
+
+    direct_vm.sender = direct_bob
+    paid = contract.withdraw()
+
+    assert paid == 60000
+    assert contract.get_balance(bob) == 0
+    assert contract.get_withdrawable(bob) == 0
+
+
+def test_withdraw_requires_a_balance(direct_vm, direct_deploy, direct_alice):
+    contract = _deploy(direct_deploy)
+    _create(contract, direct_vm, direct_alice)
+
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("Nothing to withdraw"):
+        contract.withdraw()
 
 
 # -------------------------------------------------------------------- dispute

@@ -162,13 +162,14 @@ function renderJob(container, record) {
   }
 }
 
-function renderTrack(container, address, reputation, balance) {
+function renderTrack(container, address, reputation, balance, escrow) {
   container.replaceChildren();
   container.append(el('h3', null, 'Track record'));
   container.append(
     kv([
       ['Address', address],
-      ['Ledger balance', balance],
+      ['Withdrawable (wei)', balance],
+      ['In escrow (wei)', escrow],
       ['Milestones released', reputation.released],
       ['Milestones refunded', reputation.refunded],
       ['Milestones split', reputation.split],
@@ -179,7 +180,7 @@ function renderTrack(container, address, reputation, balance) {
 
 function renderLedger(container, ledger) {
   container.replaceChildren();
-  container.append(el('h3', null, 'Settlement ledger'));
+  container.append(el('h3', null, 'Settlement ledger (withdrawable, wei)'));
   const entries = Object.entries(ledger);
   if (!entries.length) {
     container.append(el('p', 'hint', 'No settlements recorded yet.'));
@@ -207,7 +208,7 @@ async function read(functionName, args = []) {
   return client.readContract({ address: contractAddress, functionName, args });
 }
 
-async function send(functionName, args, node, ok) {
+async function send(functionName, args, node, ok, value = 0n) {
   if (!account) {
     report(node, 'Connect a wallet first.', 'error');
     return null;
@@ -220,7 +221,7 @@ async function send(functionName, args, node, ok) {
       address: contractAddress,
       functionName,
       args,
-      value: 0n,
+      value,
     });
 
     report(node, 'Submitted ' + hash + '\nWaiting for finalization\u2026');
@@ -357,22 +358,24 @@ function init() {
   $('pMilestones').value = JSON.stringify(DEFAULT_MILESTONES, null, 2);
 
   $('createJob').onclick = async () => {
+    const amount = toU256($('pAmount').value);
     const tx = await send(
       'create_job',
       [
         $('pTitle').value.trim(),
         $('pBrief').value.trim(),
         $('pDeliverable').value.trim(),
-        toU256($('pAmount').value),
+        amount,
         $('pMilestones').value.trim(),
       ],
       $('pOut'),
-      'Job created and frozen on-chain.',
+      'Job created, frozen on-chain, and the escrow is funded.',
+      amount,
     );
     if (!tx) return;
     const total = await refreshTotals();
     if (total !== null) {
-      report($('pOut'), 'Job #' + (total - 1) + ' created. A freelancer can now accept it.', 'ok');
+      report($('pOut'), 'Job #' + (total - 1) + ' created and funded. A freelancer can now accept it.', 'ok');
     }
   };
 
@@ -471,11 +474,31 @@ function init() {
     if (!requireContract(null)) return;
     const address = $('tAddress').value.trim();
     try {
-      const [rawReputation, balance] = await Promise.all([
+      const [rawReputation, balance, escrow] = await Promise.all([
         read('get_reputation', [address]),
-        read('get_balance', [address]),
+        read('get_withdrawable', [address]),
+        read('get_escrow_balance'),
       ]);
-      renderTrack($('tView'), address, JSON.parse(rawReputation), Number(balance));
+      renderTrack($('tView'), address, JSON.parse(rawReputation), Number(balance), Number(escrow));
+    } catch (error) {
+      fail(null, error);
+    }
+  };
+
+  $('withdraw').onclick = async () => {
+    const tx = await send(
+      'withdraw',
+      [],
+      $('tOut'),
+      (receipt) => 'Withdrew your balance as a real GEN transfer.',
+    );
+    if (!tx) return;
+    try {
+      const [balance, escrow] = await Promise.all([
+        read('get_withdrawable', [account]),
+        read('get_escrow_balance'),
+      ]);
+      log('Withdrawable now ' + Number(balance) + ' wei; escrow holds ' + Number(escrow) + ' wei.');
     } catch (error) {
       fail(null, error);
     }

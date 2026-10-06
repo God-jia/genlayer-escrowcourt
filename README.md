@@ -13,6 +13,11 @@ classifications.
 
 > The model classifies. The contract decides the money.
 
+EscrowCourt moves **real GEN**. Opening a job is `payable`: the client sends exactly the
+escrow amount with the transaction and the contract holds it. A settled share or a
+refund becomes withdrawable, and the payee pulls it out with `withdraw`, which emits a
+real GEN transfer to their account.
+
 ---
 
 ## Live on studionet
@@ -132,28 +137,33 @@ URL can never quietly become a payout. That is why `M1` above settled at 10 000 
 
 ## Contract API
 
-`contracts/escrow_court.py` — 12 public methods (7 write, 5 view).
+`contracts/escrow_court.py` — 15 public methods (8 write, 7 view).
 
 | Write | What it does |
 |---|---|
-| `create_job(title, brief, deliverable_url, amount, milestones_json)` | freezes the brief, the deliverable location and the weighted milestones; shares must total 10 000 bps |
+| `create_job(title, brief, deliverable_url, amount, milestones_json)` — `payable` | freezes the brief, the deliverable location and the weighted milestones; shares must total 10 000 bps; `gl.message.value` must equal `amount`, so the GEN is escrowed by the contract |
 | `accept_job(job_id)` | the freelancer takes the job (the client cannot take their own) |
-| `cancel_job(job_id)` | the client cancels while the job is still open |
+| `cancel_job(job_id)` | the client cancels while the job is still open; the full escrow becomes withdrawable for the client |
 | `submit_milestone(job_id, milestone_id, evidence_url, note)` | freelancer submits a milestone with evidence |
-| `approve_milestone(job_id, milestone_id)` | client approves; the milestone share is credited |
+| `approve_milestone(job_id, milestone_id)` | client approves; the milestone share becomes withdrawable for the freelancer |
 | `dispute_milestone(job_id, milestone_id, claim)` | client disputes a submitted milestone |
-| `adjudicate_milestone(job_id, milestone_id)` | anyone triggers the validator round; the settlement is derived in code |
+| `adjudicate_milestone(job_id, milestone_id)` | anyone triggers the validator round; the settlement is derived in code and credited to the parties |
+| `withdraw()` | the caller pulls their withdrawable balance out as a real GEN transfer |
 
 | View | Returns |
 |---|---|
 | `get_job(job_id)` | the full job record, including rulings |
-| `get_balance(address)` | accrued settlement balance |
+| `get_balance(address)` | withdrawable balance of an address |
+| `get_withdrawable(address)` | withdrawable balance of an address |
+| `get_escrow_balance()` | GEN currently held in escrow by the contract |
 | `get_reputation(address)` | `released` / `refunded` / `split` / `disputes_raised` counters |
-| `get_ledger()` | the whole settlement ledger |
+| `get_ledger()` | the whole withdrawable ledger |
 | `total_jobs()` | number of jobs created |
 
-The contract is an accounting and adjudication layer. It keeps a settlement ledger in
-accounting units and a per-address track record; it does not move real value.
+Value handling: `create_job` is decorated `@gl.public.write.payable` and rejects a call
+whose `gl.message.value` does not equal the job amount. Payouts leave the contract with
+`emit_transfer` to the payee's external account, so the escrow holds and moves real GEN,
+not just numbers.
 
 ## The dApp
 
@@ -180,37 +190,40 @@ pip install -r requirements.txt
 # static check
 genvm-lint check contracts/escrow_court.py
 
-# 24 direct-mode unit tests
+# 29 direct-mode unit tests
 pytest tests/direct -v
 ```
 
 The test suite covers the happy path plus every revert: bad milestone JSON, duplicate
-ids, shares that do not total 10 000 bps, thin criteria, self-acceptance, double
-acceptance, cancelling after acceptance, submitting out of turn, approving or disputing
-as the wrong party, adjudicating without a dispute, double adjudication, unknown ids,
-and all four settlement paths (`release`, `refund`, `split`, and `split` when the
-deliverable is unreachable).
+ids, shares that do not total 10 000 bps, thin criteria, a create call whose value does
+not match the escrow amount, self-acceptance, double acceptance, cancelling after
+acceptance, the client refund on cancellation, submitting out of turn, approving or
+disputing as the wrong party, adjudicating without a dispute, double adjudication,
+withdrawing with nothing to withdraw, unknown ids, and all four settlement paths
+(`release`, `refund`, `split`, and `split` when the deliverable is unreachable).
 
 ## Deploy it yourself
 
 `tools/deploy_and_demo.py` deploys the contract and runs the entire lifecycle end to
-end against studionet, printing every transaction hash:
+end against studionet, printing every transaction hash: it funds the escrow on
+`create_job`, runs a dispute through adjudication, approves the second milestone, then
+withdraws both parties' balances as real GEN transfers.
 
 ```bash
 python tools/deploy_and_demo.py
 ```
 
 It keeps the deployer key in `tools/.deploy_key` (git-ignored) and writes the full
-result — address, trace, final job state, ledger and reputation — to
+result — address, trace, final job state, escrow balance, ledger and reputation — to
 `tools/deployment.json`.
 
 ## Layout
 
 ```
 contracts/escrow_court.py        the Intelligent Contract
-tests/direct/test_escrow_court.py 24 direct-mode tests
+tests/direct/test_escrow_court.py 29 direct-mode tests
 docs/                            the dApp (GitHub Pages root) + the demo video
-tools/deploy_and_demo.py         deploy + full lifecycle on studionet
+tools/deploy_and_demo.py         deploy + full lifecycle (escrow, adjudication, payouts) on studionet
 tools/make_demo.py               compose the demo video from dApp screenshots
 ```
 

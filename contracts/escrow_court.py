@@ -5,6 +5,22 @@ import json
 from genlayer import *
 
 
+@gl.contract_interface
+class _Payee:
+    """Minimal interface used to push GEN to an external account.
+
+    Recipients of an escrow payout are externally owned accounts, so the value
+    leaves the contract through an external message (EthSend) rather than an
+    internal IC-to-IC message.
+    """
+
+    class View:
+        pass
+
+    class Write:
+        pass
+
+
 CRITERION_VERDICTS = ("met", "unmet", "unclear")
 RESOLUTIONS = ("release", "refund", "split")
 REPUTATION_KEYS = {"release": "released", "refund": "refunded", "split": "split"}
@@ -183,9 +199,11 @@ class EscrowCourt(gl.Contract):
     unclear. The settlement (release / refund / split) is derived in code from
     those classifications, so the model classifies but never decides the money.
 
-    The contract is an accounting and adjudication layer: it keeps a settlement
-    ledger in accounting units and a per-address track record. It does not move
-    real value.
+    Real value: opening a job is payable and the client's GEN is escrowed in the
+    contract (``gl.message.value`` must equal the job amount). Settlements and
+    refunds credit a withdrawable balance, and ``withdraw`` pushes that balance
+    to the payee's account as a real GEN transfer. The per-address track record
+    is kept alongside the money.
     """
 
     jobs: TreeMap[u256, str]
@@ -231,6 +249,12 @@ class EscrowCourt(gl.Contract):
         ledger = self._all_ledger()
         ledger[address] = self._balance(address) + amount
         self.ledger = json.dumps(ledger, sort_keys=True)
+
+    def _payout(self, address: str, amount: int) -> None:
+        """Push GEN out of the contract to an external account."""
+        if amount <= 0:
+            return
+        _Payee(Address(address)).emit_transfer(value=u256(amount))
 
     def _all_reputation(self) -> dict:
         if not self.reputation:
@@ -278,7 +302,7 @@ class EscrowCourt(gl.Contract):
 
     # ------------------------------------------------------------------- writes
 
-    @gl.public.write
+    @gl.public.write.payable
     def create_job(
         self,
         title: str,
@@ -305,6 +329,9 @@ class EscrowCourt(gl.Contract):
 
         milestones = _parse_milestones(milestones_json)
 
+        if int(gl.message.value) != amount:
+            raise gl.vm.UserError("Sent value must equal the escrow amount")
+
         job_id = self.next_job_id
         self.next_job_id = job_id + 1
 
@@ -316,6 +343,7 @@ class EscrowCourt(gl.Contract):
             "brief": brief,
             "deliverable_url": deliverable_url,
             "amount": amount,
+            "escrowed": amount,
             "milestones": milestones,
             "status": "open",
         }
@@ -344,8 +372,26 @@ class EscrowCourt(gl.Contract):
         if record["status"] != "open":
             raise gl.vm.UserError("Only an open job can be cancelled")
 
+        # The full escrow returns to the client's withdrawable balance.
+        self._credit(record["client"], int(record["amount"]))
+        record["escrowed"] = 0
         record["status"] = "cancelled"
         self._save_job(job_id, record)
+
+    @gl.public.write
+    def withdraw(self) -> u256:
+        """Push the caller's settled balance out of escrow as a real GEN transfer."""
+        address = str(gl.message.sender_address).lower()
+        amount = self._balance(address)
+        if amount <= 0:
+            raise gl.vm.UserError("Nothing to withdraw")
+
+        ledger = self._all_ledger()
+        ledger[address] = 0
+        self.ledger = json.dumps(ledger, sort_keys=True)
+
+        self._payout(address, amount)
+        return u256(amount)
 
     @gl.public.write
     def submit_milestone(
@@ -629,6 +675,15 @@ Respond with ONLY a JSON object, no prose and no markdown:
     @gl.public.view
     def get_balance(self, address: str) -> u256:
         return self._balance(address.strip().lower())
+
+    @gl.public.view
+    def get_withdrawable(self, address: str) -> u256:
+        return self._balance(address.strip().lower())
+
+    @gl.public.view
+    def get_escrow_balance(self) -> u256:
+        """GEN currently held in escrow by the contract."""
+        return self.balance
 
     @gl.public.view
     def get_reputation(self, address: str) -> str:

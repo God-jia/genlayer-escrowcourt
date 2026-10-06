@@ -47,8 +47,9 @@
         <h2>Post a job</h2>
         <p class="hint">
           You become the client. The brief, the deliverable location, and every
-          milestone share are frozen on-chain at creation, so a later dispute is
-          judged against what both sides actually agreed to.
+          milestone share are frozen on-chain at creation, and the escrow amount
+          is sent with the transaction — the contract holds the GEN until a
+          milestone settles.
         </p>
         <div class="grid">
           <label>
@@ -56,8 +57,8 @@
             <input id="pTitle" value="Landing page and API integration" />
           </label>
           <label>
-            Escrow amount (accounting units)
-            <input id="pAmount" type="number" min="1" step="1" value="100000" />
+            Escrow amount (wei — sent with the transaction)
+            <input id="pAmount" type="number" min="1" step="1" value="1000000000000000" />
           </label>
         </div>
         <label>
@@ -150,6 +151,8 @@
         <p class="hint">
           Every settled milestone is counted per address, so a client can see
           how a freelancer's milestones have been resolved and vice versa.
+          Settled shares sit in a withdrawable balance until the payee pulls
+          them out with a real GEN transfer.
         </p>
         <div class="row">
           <label>
@@ -159,15 +162,19 @@
           <button id="loadTrack" class="ghost">Load</button>
           <button id="loadLedger" class="ghost">Load ledger</button>
         </div>
+        <div class="row">
+          <button id="withdraw" class="ok">Withdraw my balance</button>
+        </div>
         <div id="tView" class="card"></div>
+        <output id="tOut" class="out"></output>
       </section>
     </main>
 
     <div id="log" class="log" hidden></div>
     <footer>
       <p>
-        EscrowCourt keeps an on-chain settlement ledger and track record. It
-        does not move real value.
+        EscrowCourt escrows real GEN: the client funds the job, settled shares
+        become withdrawable, and the payee pulls them out with a real transfer.
       </p>
     </footer>
     <script type="module" src="app.js"></script>

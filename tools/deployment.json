@@ -1,44 +1,55 @@
 {
-  "contract": "0xD6b0771b600A22b70D61d2Fd594Ca8F4F8E2D22f",
-  "deploy_tx": "0x9f48014128fac4193dbb26fd892c2544a780ed2584ba8c965f6e43aac8eca53f",
+  "contract": "0x8A51ca7d8C77859E72DC89d673Ac9A665DcE66F3",
+  "deploy_tx": "0x04ef35c7d93bfd5c3e8da41df412b85cfdb96170f15036cf79083ed1e528bf39",
   "deployer": "0x5E5C124A132CDA6d47A110706AC1A5B9739966f3",
-  "freelancer": "0x029aB4DE3A74f17720A4582E94Eb6ad524A1532c",
-  "job": "{\"amount\": 100000, \"brief\": \"Build a static landing page for a documentation example domain. The page must be served over HTTPS, present a clear top-level heading, and list at least three distinct product features. Deliver the page at the agreed URL.\", \"client\": \"0x5e5c124a132cda6d47a110706ac1a5b9739966f3\", \"deliverable_url\": \"https://example.com/\", \"freelancer\": \"0x029ab4de3a74f17720a4582e94eb6ad524a1532c\", \"id\": 0, \"milestones\": [{\"criteria\": [\"The page is served over HTTPS and returns an HTML document.\", \"The page contains a visible top-level heading.\", \"The page lists at least three distinct product features.\"], \"dispute_claim\": \"The delivered page is a bare placeholder. It does not present the three product features we agreed on, so this milestone should not be paid in full.\", \"evidence_url\": \"https://www.iana.org/help/example-domains\", \"id\": \"M1\", \"resolution\": \"split\", \"ruling\": {\"client_cut\": 50000, \"confidence\": 90, \"criteria\": [{\"criterion\": \"The page is served over HTTPS and returns an HTML document.\", \"index\": 0, \"reason\": \"No evidence confirms the page was served over HTTPS.\", \"verdict\": \"unclear\"}, {\"criterion\": \"The page contains a visible top-level heading.\", \"index\": 1, \"reason\": \"The HTML contains no visible top-level heading element.\", \"verdict\": \"unmet\"}, {\"criterion\": \"The page lists at least three distinct product features.\", \"index\": 2, \"reason\": \"The content does not list three distinct product features.\", \"verdict\": \"unmet\"}], \"deliverable_available\": true, \"evidence_available\": true, \"freelancer_cut\": 10000, \"reasoning\": \"The deliverable provides HTML without a heading or feature list, and lacks protocol information. Therefore criteria 1 and 2 are clearly unmet, while criterion 0 cannot be verified.\", \"result\": \"split\", \"source\": \"adjudication\"}, \"share_bps\": 6000, \"status\": \"settled\", \"submission_note\": \"Delivered the landing page at the agreed URL and added the IANA reference page as evidence.\", \"title\": \"Responsive landing page\"}, {\"criteria\": [\"The page is reachable over HTTPS without a redirect loop.\", \"The document exposes a readable title element.\"], \"dispute_claim\": \"\", \"evidence_url\": \"https://www.iana.org/help/example-domains\", \"id\": \"M2\", \"resolution\": \"release\", \"ruling\": {\"reasoning\": \"The client approved this milestone.\", \"result\": \"release\", \"source\": \"client\"}, \"share_bps\": 4000, \"status\": \"released\", \"submission_note\": \"Accessibility pass completed; the page loads over HTTPS and exposes a title element.\", \"title\": \"Accessibility pass\"}], \"status\": \"completed\", \"title\": \"Example-domain landing page\"}",
-  "ledger": "{\"0x029ab4de3a74f17720a4582e94eb6ad524a1532c\": 50000, \"0x5e5c124a132cda6d47a110706ac1a5b9739966f3\": 50000}",
+  "freelancer": "0xED1Fe30327533B5A096e79525D4055cb62FF99e8",
+  "escrow_amount_wei": 1000000000000000,
+  "escrow_balance_wei": "0",
+  "freelancer_balance_wei": "1000000000000000000",
+  "job": "{\"amount\": 1000000000000000, \"brief\": \"Build a static landing page for a documentation example domain. The page must be served over HTTPS, present a clear top-level heading, and list at least three distinct product features. Deliver the page at the agreed URL.\", \"client\": \"0x5e5c124a132cda6d47a110706ac1a5b9739966f3\", \"deliverable_url\": \"https://example.com/\", \"escrowed\": 1000000000000000, \"freelancer\": \"0xed1fe30327533b5a096e79525d4055cb62ff99e8\", \"id\": 0, \"milestones\": [{\"criteria\": [\"The page is served over HTTPS and returns an HTML document.\", \"The page contains a visible top-level heading.\", \"The page lists at least three distinct product features.\"], \"dispute_claim\": \"The delivered page is a bare placeholder. It does not present the three product features we agreed on, so this milestone should not be paid in full.\", \"evidence_url\": \"https://www.iana.org/help/example-domains\", \"id\": \"M1\", \"resolution\": \"split\", \"ruling\": {\"client_cut\": 500000000000000, \"confidence\": 92, \"criteria\": [{\"criterion\": \"The page is served over HTTPS and returns an HTML document.\", \"index\": 0, \"reason\": \"The retrieved deliverable is HTML content, but there is no reliable evidence here showing the page was served over HTTPS at the agreed URL.\", \"verdict\": \"unclear\"}, {\"criterion\": \"The page contains a visible top-level heading.\", \"index\": 1, \"reason\": \"The delivered page snippet contains no visible top-level heading such as an <h1> element.\", \"verdict\": \"unmet\"}, {\"criterion\": \"The page lists at least three distinct product features.\", \"index\": 2, \"reason\": \"The page text describes the example domain and warnings about its use, but it does not list at least three distinct product features.\", \"verdict\": \"unmet\"}], \"deliverable_available\": true, \"evidence_available\": true, \"freelancer_cut\": 100000000000000, \"reasoning\": \"The authoritative judgment should be based on the delivered page content, and that content is available as an HTML snippet. However, the snippet does not demonstrate HTTPS delivery, lacks a visible top-level heading, and does not include a three-feature product list, while the separate evidence appears to be an unrelated IANA reference page rather than the delivered landing page.\", \"result\": \"split\", \"source\": \"adjudication\"}, \"share_bps\": 6000, \"status\": \"settled\", \"submission_note\": \"Delivered the landing page at the agreed URL and added the IANA reference page as evidence.\", \"title\": \"Responsive landing page\"}, {\"criteria\": [\"The page is reachable over HTTPS without a redirect loop.\", \"The document exposes a readable title element.\"], \"dispute_claim\": \"\", \"evidence_url\": \"https://www.iana.org/help/example-domains\", \"id\": \"M2\", \"resolution\": \"release\", \"ruling\": {\"reasoning\": \"The client approved this milestone.\", \"result\": \"release\", \"source\": \"client\"}, \"share_bps\": 4000, \"status\": \"released\", \"submission_note\": \"Accessibility pass completed; the page loads over HTTPS and exposes a title element.\", \"title\": \"Accessibility pass\"}], \"status\": \"completed\", \"title\": \"Example-domain landing page\"}",
+  "ledger": "{\"0x5e5c124a132cda6d47a110706ac1a5b9739966f3\": 0, \"0xed1fe30327533b5a096e79525d4055cb62ff99e8\": 0}",
   "reputation": "{\"disputes_raised\": 0, \"refunded\": 0, \"released\": 1, \"split\": 1}",
   "total_jobs": 1,
   "trace": [
     {
       "step": "deploy",
-      "tx": "0x9f48014128fac4193dbb26fd892c2544a780ed2584ba8c965f6e43aac8eca53f"
+      "tx": "0x04ef35c7d93bfd5c3e8da41df412b85cfdb96170f15036cf79083ed1e528bf39"
     },
     {
-      "step": "create_job",
-      "tx": "0xe8672b4649a91b338663733ca520ed373f8a4ca612f26d5277cd011e09d4a4d0"
+      "step": "create_job (escrow funded)",
+      "tx": "0x43c18e5fcaae6af2f87db5a84e093ec242e71529a51be4ba5d1d01e830531137"
     },
     {
       "step": "accept_job",
-      "tx": "0x5d11d784e40b2028ae77ece1cfdb4204603a6e138c70b0952142622304f39c64"
+      "tx": "0xaaa42d090b15803ac64e39999d659181ea575657c46731a3ce76dcc5dfcb6c25"
     },
     {
       "step": "submit_milestone M1",
-      "tx": "0x5573b55563d7c526cb1eb443ebd536c6219e51cf6fc87a3477f6ea0b2c2a37a1"
+      "tx": "0xf4d2b63b5e100cb43d6b587ad55209ae693060e7958530f8688422ddc75c9d6f"
     },
     {
       "step": "dispute_milestone M1",
-      "tx": "0x8c074fa66915e099bfc1bddef75b9c0ff4e8e5abdec3c022d6da90d166c4a718"
+      "tx": "0x8489ee59c781afb62a26fbc5fa51c1769315a2f2d302ca48c111224e1ebd70c1"
     },
     {
       "step": "adjudicate_milestone M1",
-      "tx": "0x2ce780f05247bd32a23edae2a9305901aeef1ed94b42535546eaf6b2a5f38ab1"
+      "tx": "0x5f15a59fa1e2ad3d31dca576515bab7c06b38820d5bdd2f986076846f451253b"
     },
     {
       "step": "submit_milestone M2",
-      "tx": "0xa83496085e64073e3bad24dc1d4f8bb8e46585008795de6123c1c0e60fc6fb54"
+      "tx": "0x21f0fe116488671d65b87bc5465192cae519bc19c9e5d94286b5dbdb4391542d"
     },
     {
       "step": "approve_milestone M2",
-      "tx": "0xa653b3ccf4530d388ff33614499c9ba948a469b52555c1d4c5428a725d432ca0"
+      "tx": "0xe4976ecc6cea95ca4af6e79a205b542f3cc293c743ab3a835e646ad585fa4436"
+    },
+    {
+      "step": "withdraw (freelancer)",
+      "tx": "0x8848c6bb900e339f397cac015603aba0de75863848dcba26fa52e863ef0b4757"
+    },
+    {
+      "step": "withdraw (client)",
+      "tx": "0xa1463941bb0697ca711cd4d9b4f4604d8af57fb977e7d65ce2bffad1f41f62f7"
     }
   ]
 }
