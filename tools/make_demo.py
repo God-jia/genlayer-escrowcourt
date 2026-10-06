@@ -145,7 +145,7 @@ def end_card():
     rows = [
         ("REPOSITORY", "github.com/God-jia/genlayer-escrowcourt"),
         ("dApp", "god-jia.github.io/genlayer-escrowcourt"),
-        ("CONTRACT", "0x8A51ca7d8C77859E72DC89d673Ac9A665DcE66F3"),
+        ("CONTRACT", "0x5b6712CF7ec4509680e9803bAa1640E54D8176B5"),
         ("NETWORK", "studionet  ·  chain ID 61999"),
     ]
     y = 250
@@ -156,7 +156,7 @@ def end_card():
         d.text((222, y + 46), value, font=f_val, fill=TEXT)
         y += 96
 
-    d.text((W // 2, H - 44), "28 direct-mode tests  ·  payable escrow  ·  real GEN payout",
+    d.text((W // 2, H - 44), "29 direct-mode tests  ·  payable escrow  ·  real GEN payout",
            font=f_lab, fill=MUTED, anchor="mm")
     return img
 
@@ -164,7 +164,7 @@ def end_card():
 BULLETS = {
     1: [
         ("Opening a job funds the escrow",
-         "create_job is payable: the client sends exactly the escrow amount with the transaction and the contract holds the GEN."),
+         "create_job is payable: the GEN sent with the transaction becomes the escrow and the contract holds it."),
         ("The brief is frozen on-chain",
          "Brief, deliverable location and weighted milestones are stored with the job, so the standard cannot drift after delivery."),
     ],

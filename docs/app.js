@@ -365,7 +365,6 @@ function init() {
         $('pTitle').value.trim(),
         $('pBrief').value.trim(),
         $('pDeliverable').value.trim(),
-        amount,
         $('pMilestones').value.trim(),
       ],
       $('pOut'),

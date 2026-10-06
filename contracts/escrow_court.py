@@ -200,7 +200,7 @@ class EscrowCourt(gl.Contract):
     those classifications, so the model classifies but never decides the money.
 
     Real value: opening a job is payable and the client's GEN is escrowed in the
-    contract (``gl.message.value`` must equal the job amount). Settlements and
+    contract (``gl.message.value`` becomes the escrow amount). Settlements and
     refunds credit a withdrawable balance, and ``withdraw`` pushes that balance
     to the payee's account as a real GEN transfer. The per-address track record
     is kept alongside the money.
@@ -308,7 +308,6 @@ class EscrowCourt(gl.Contract):
         title: str,
         brief: str,
         deliverable_url: str,
-        amount: u256,
         milestones_json: str,
     ) -> u256:
         title = title.strip()
@@ -323,14 +322,14 @@ class EscrowCourt(gl.Contract):
         if not _is_http_url(deliverable_url):
             raise gl.vm.UserError("deliverable_url must be an http(s) URL")
 
-        amount = int(amount)
-        if amount <= 0:
-            raise gl.vm.UserError("Escrow amount must be greater than zero")
-
         milestones = _parse_milestones(milestones_json)
 
-        if int(gl.message.value) != amount:
-            raise gl.vm.UserError("Sent value must equal the escrow amount")
+        # The escrow is exactly the GEN the client attached to this transaction.
+        # There is no separate amount argument it could disagree with, so a
+        # mismatched value can never revert and strand the client's funds.
+        amount = int(gl.message.value)
+        if amount <= 0:
+            raise gl.vm.UserError("Send the escrow amount with the transaction")
 
         job_id = self.next_job_id
         self.next_job_id = job_id + 1
@@ -380,11 +379,16 @@ class EscrowCourt(gl.Contract):
 
     @gl.public.write
     def withdraw(self) -> u256:
-        """Push the caller's settled balance out of escrow as a real GEN transfer."""
+        """Push the caller's settled balance out of escrow as a real GEN transfer.
+
+        Returns 0 when there is nothing to withdraw rather than reverting, so a
+        repeated call — or a replay against an already drained ledger — still
+        succeeds instead of surfacing a GenVM error.
+        """
         address = str(gl.message.sender_address).lower()
         amount = self._balance(address)
         if amount <= 0:
-            raise gl.vm.UserError("Nothing to withdraw")
+            return u256(0)
 
         ledger = self._all_ledger()
         ledger[address] = 0

@@ -148,7 +148,7 @@ def main():
     tx = client.write_contract(
         address=address,
         function_name="create_job",
-        args=["Example-domain landing page", BRIEF, DELIVERABLE_URL, ESCROW, milestones_json],
+        args=["Example-domain landing page", BRIEF, DELIVERABLE_URL, milestones_json],
         value=ESCROW,
     )
     finalize(client, tx, "create_job (escrow funded)")
@@ -208,6 +208,11 @@ def main():
 
     tx = client.write_contract(address=address, function_name="withdraw", args=[])
     finalize(client, tx, "withdraw (client)")
+
+    # Withdrawing again with nothing left returns 0 instead of reverting, so the
+    # payout path stays a SUCCESS even against an already drained ledger.
+    tx = client.write_contract(address=address, function_name="withdraw", args=[])
+    finalize(client, tx, "withdraw (drained, returns 0)")
 
     print("\n== state ==")
     job = client.read_contract(address=address, function_name="get_job", args=[0])

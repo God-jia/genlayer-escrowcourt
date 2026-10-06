@@ -37,15 +37,14 @@ def _deploy(direct_deploy):
     return direct_deploy("contracts/escrow_court.py")
 
 
-def _create(contract, direct_vm, sender, milestones=None, amount=AMOUNT, value=None):
+def _create(contract, direct_vm, sender, milestones=None, value=AMOUNT):
     direct_vm.sender = sender
-    direct_vm.value = amount if value is None else value
+    direct_vm.value = value
     try:
         return contract.create_job(
             "Landing page and API integration",
             BRIEF,
             DELIVERABLE_URL,
-            amount,
             json.dumps(milestones if milestones is not None else MILESTONES),
         )
     finally:
@@ -116,9 +115,13 @@ def test_create_job_and_read(direct_vm, direct_deploy, direct_alice):
 def test_create_rejects_bad_milestones_json(direct_vm, direct_deploy, direct_alice):
     contract = _deploy(direct_deploy)
     direct_vm.sender = direct_alice
+    direct_vm.value = AMOUNT
 
-    with direct_vm.expect_revert("must be a JSON array"):
-        contract.create_job("Landing page", BRIEF, DELIVERABLE_URL, AMOUNT, "not json")
+    try:
+        with direct_vm.expect_revert("must be a JSON array"):
+            contract.create_job("Landing page", BRIEF, DELIVERABLE_URL, "not json")
+    finally:
+        direct_vm.value = 0
 
 
 def test_create_rejects_duplicate_milestone_ids(direct_vm, direct_deploy, direct_alice):
@@ -140,11 +143,15 @@ def test_create_rejects_shares_that_do_not_total(direct_vm, direct_deploy, direc
 def test_create_rejects_short_brief(direct_vm, direct_deploy, direct_alice):
     contract = _deploy(direct_deploy)
     direct_vm.sender = direct_alice
+    direct_vm.value = AMOUNT
 
-    with direct_vm.expect_revert("Job brief must be"):
-        contract.create_job(
-            "Landing page", "too short", DELIVERABLE_URL, AMOUNT, json.dumps(MILESTONES)
-        )
+    try:
+        with direct_vm.expect_revert("Job brief must be"):
+            contract.create_job(
+                "Landing page", "too short", DELIVERABLE_URL, json.dumps(MILESTONES)
+            )
+    finally:
+        direct_vm.value = 0
 
 
 def test_create_rejects_thin_criterion(direct_vm, direct_deploy, direct_alice):
@@ -164,13 +171,19 @@ def test_create_escrows_the_amount(direct_vm, direct_deploy, direct_alice):
     assert record["escrowed"] == AMOUNT
 
 
-def test_create_requires_exact_value(direct_vm, direct_deploy, direct_alice):
+def test_create_escrows_the_sent_value(direct_vm, direct_deploy, direct_alice):
+    contract = _deploy(direct_deploy)
+    job_id = _create(contract, direct_vm, direct_alice, value=AMOUNT * 3)
+
+    record = json.loads(contract.get_job(job_id))
+    assert record["amount"] == AMOUNT * 3
+    assert record["escrowed"] == AMOUNT * 3
+
+
+def test_create_requires_a_funded_transaction(direct_vm, direct_deploy, direct_alice):
     contract = _deploy(direct_deploy)
 
-    with direct_vm.expect_revert("Sent value must equal the escrow amount"):
-        _create(contract, direct_vm, direct_alice, value=AMOUNT - 1)
-
-    with direct_vm.expect_revert("Sent value must equal the escrow amount"):
+    with direct_vm.expect_revert("Send the escrow amount"):
         _create(contract, direct_vm, direct_alice, value=0)
 
 
@@ -306,13 +319,12 @@ def test_withdraw_pays_out_and_zeroes_the_balance(
     assert contract.get_withdrawable(bob) == 0
 
 
-def test_withdraw_requires_a_balance(direct_vm, direct_deploy, direct_alice):
+def test_withdraw_with_no_balance_returns_zero(direct_vm, direct_deploy, direct_alice):
     contract = _deploy(direct_deploy)
     _create(contract, direct_vm, direct_alice)
 
     direct_vm.sender = direct_alice
-    with direct_vm.expect_revert("Nothing to withdraw"):
-        contract.withdraw()
+    assert contract.withdraw() == 0
 
 
 # -------------------------------------------------------------------- dispute

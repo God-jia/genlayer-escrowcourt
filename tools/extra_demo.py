@@ -118,7 +118,7 @@ def main():
     tx = client.write_contract(
         address=address,
         function_name="create_job",
-        args=["Example-domain product site", BRIEF, DELIVERABLE_URL, ESCROW, json.dumps(MILESTONES)],
+        args=["Example-domain product site", BRIEF, DELIVERABLE_URL, json.dumps(MILESTONES)],
         value=ESCROW,
     )
     finalize(client, tx, "create_job (funded)")
