@@ -145,7 +145,7 @@ def end_card():
     rows = [
         ("REPOSITORY", "github.com/God-jia/genlayer-escrowcourt"),
         ("dApp", "god-jia.github.io/genlayer-escrowcourt"),
-        ("CONTRACT", "0xD6b0771b600A22b70D61d2Fd594Ca8F4F8E2D22f"),
+        ("CONTRACT", "0x8A51ca7d8C77859E72DC89d673Ac9A665DcE66F3"),
         ("NETWORK", "studionet  ·  chain ID 61999"),
     ]
     y = 250
@@ -156,23 +156,23 @@ def end_card():
         d.text((222, y + 46), value, font=f_val, fill=TEXT)
         y += 96
 
-    d.text((W // 2, H - 44), "24 direct-mode tests  ·  real web fetch  ·  real LLM round",
+    d.text((W // 2, H - 44), "28 direct-mode tests  ·  payable escrow  ·  real GEN payout",
            font=f_lab, fill=MUTED, anchor="mm")
     return img
 
 
 BULLETS = {
     1: [
+        ("Opening a job funds the escrow",
+         "create_job is payable: the client sends exactly the escrow amount with the transaction and the contract holds the GEN."),
         ("The brief is frozen on-chain",
-         "A client writes the brief, the deliverable URL, the amount and the milestones. Shares must total 10 000 bps."),
-        ("Criteria are the contract",
-         "Every acceptance criterion is stored with the job, so the standard cannot drift after delivery."),
+         "Brief, deliverable location and weighted milestones are stored with the job, so the standard cannot drift after delivery."),
     ],
     2: [
         ("One job, read back from studionet",
          "Job #0 loaded straight from the contract: client, freelancer, escrow amount and both milestones."),
-        ("Deliveries carry evidence",
-         "Each submission records an evidence URL and a note that validators will re-read at adjudication."),
+        ("The contract really holds the GEN",
+         "The funded amount sits in contract state until a milestone settles — no off-chain bookkeeping."),
     ],
     3: [
         ("Anyone can trigger the round",
@@ -184,13 +184,13 @@ BULLETS = {
         ("A verdict per criterion",
          "The model labels each criterion met / unmet / unclear — it never picks a number."),
         ("The split is derived in code",
-         "One unclear and two unmet map deterministically to split: freelancer 10 000, client 50 000."),
+         "One unclear and two unmet map deterministically to split: freelancer 1e14 wei, client 5e14 wei."),
     ],
     5: [
-        ("Settlement ledger on-chain",
-         "Balances are read straight from contract state — 50 000 to the freelancer, 50 000 to the client."),
-        ("Track record per address",
-         "released / refunded / split counters give each side a portable reputation."),
+        ("Settled shares become withdrawable",
+         "Balances are read straight from contract state, and the payee pulls them out with withdraw()."),
+        ("withdraw() emits a real transfer",
+         "Every payout leaves the contract as a real GEN transfer to the payee's account."),
     ],
 }
 
@@ -202,7 +202,7 @@ def to_array(img):
 def build():
     slides = [title_card()]
     slides.append(shot_card(1, "Post a job, freeze the standard",
-                            "Post a job tab — brief, deliverable location and weighted milestones.",
+                            "Post a job tab — brief, deliverable location, milestones and the escrow sent with the transaction.",
                             "escrow-1-post.jpg"))
     slides.append(shot_card(2, "The job as the chain sees it",
                             "Job workspace — job #0 loaded live from studionet.",
@@ -213,8 +213,8 @@ def build():
     slides.append(shot_card(4, "Verdicts in, settlement out",
                             "Ruling — criteria classified unclear / unmet / unmet, split derived in code.",
                             "escrow-5-ruling.jpg"))
-    slides.append(shot_card(5, "Transparency the parties can't fake",
-                            "Track record — settlement ledger and per-address reputation.",
+    slides.append(shot_card(5, "Real GEN in, real GEN out",
+                            "Track record — withdrawable balance, escrow held by the contract and per-address reputation.",
                             "escrow-4-track.jpg"))
     slides.append(end_card())
 

@@ -24,25 +24,28 @@ real GEN transfer to their account.
 
 | | |
 |---|---|
-| Contract | [`0xD6b0771b600A22b70D61d2Fd594Ca8F4F8E2D22f`](https://explorer-studio.genlayer.com/address/0xD6b0771b600A22b70D61d2Fd594Ca8F4F8E2D22f) |
+| Contract | [`0x8A51ca7d8C77859E72DC89d673Ac9A665DcE66F3`](https://explorer-studio.genlayer.com/address/0x8A51ca7d8C77859E72DC89d673Ac9A665DcE66F3) |
 | Network | studionet (chain ID 61999) |
 | dApp | <https://god-jia.github.io/genlayer-escrowcourt/> |
 | Demo video | <https://god-jia.github.io/genlayer-escrowcourt/escrowcourt-demo.mp4> |
-| Deploy tx | [`0x9f480141…c8eca53f`](https://explorer-studio.genlayer.com/tx/0x9f48014128fac4193dbb26fd892c2544a780ed2584ba8c965f6e43aac8eca53f) |
+| Deploy tx | [`0x04ef35c7…e528bf39`](https://explorer-studio.genlayer.com/tx/0x04ef35c7d93bfd5c3e8da41df412b85cfdb96170f15036cf79083ed1e528bf39) |
+| Escrow amount | `1e15` wei, sent with the `create_job` transaction |
 
 The full lifecycle below was executed against studionet with real validators, real web
 fetches and a real LLM round — not a simulation.
 
 | Step | Transaction | Result |
 |---|---|---|
-| `deploy` | [`0x9f480141…c8eca53f`](https://explorer-studio.genlayer.com/tx/0x9f48014128fac4193dbb26fd892c2544a780ed2584ba8c965f6e43aac8eca53f) | `EscrowCourt` deployed |
-| `create_job` | [`0xe8672b46…09d4a4d0`](https://explorer-studio.genlayer.com/tx/0xe8672b4649a91b338663733ca520ed373f8a4ca612f26d5277cd011e09d4a4d0) | job #0, milestones `M1` (6000 bps) + `M2` (4000 bps) |
-| `accept_job` | [`0x5d11d784…04f39c64`](https://explorer-studio.genlayer.com/tx/0x5d11d784e40b2028ae77ece1cfdb4204603a6e138c70b0952142622304f39c64) | freelancer assigned |
-| `submit_milestone M1` | [`0x5573b555…2c2a37a1`](https://explorer-studio.genlayer.com/tx/0x5573b55563d7c526cb1eb443ebd536c6219e51cf6fc87a3477f6ea0b2c2a37a1) | submitted with evidence |
-| `dispute_milestone M1` | [`0x8c074fa6…66c4a718`](https://explorer-studio.genlayer.com/tx/0x8c074fa66915e099bfc1bddef75b9c0ff4e8e5abdec3c022d6da90d166c4a718) | client disputes |
-| `adjudicate_milestone M1` | [`0x2ce780f0…a5f38ab1`](https://explorer-studio.genlayer.com/tx/0x2ce780f05247bd32a23edae2a9305901aeef1ed94b42535546eaf6b2a5f38ab1) | `split` — freelancer 10 000, client 50 000 |
-| `submit_milestone M2` | [`0xa8349608…0fc6fb54`](https://explorer-studio.genlayer.com/tx/0xa83496085e64073e3bad24dc1d4f8bb8e46585008795de6123c1c0e60fc6fb54) | submitted with evidence |
-| `approve_milestone M2` | [`0xa653b3cc…5d432ca0`](https://explorer-studio.genlayer.com/tx/0xa653b3ccf4530d388ff33614499c9ba948a469b52555c1d4c5428a725d432ca0) | `release` — freelancer 40 000 |
+| `deploy` | [`0x04ef35c7…e528bf39`](https://explorer-studio.genlayer.com/tx/0x04ef35c7d93bfd5c3e8da41df412b85cfdb96170f15036cf79083ed1e528bf39) | `EscrowCourt` deployed |
+| `create_job` (payable, `1e15` wei) | [`0x43c18e5f…0531137`](https://explorer-studio.genlayer.com/tx/0x43c18e5fcaae6af2f87db5a84e093ec242e71529a51be4ba5d1d01e830531137) | job #0 funded by the contract; milestones `M1` (6000 bps) + `M2` (4000 bps) |
+| `accept_job` | [`0xaaa42d09…dfcb6c25`](https://explorer-studio.genlayer.com/tx/0xaaa42d090b15803ac64e39999d659181ea575657c46731a3ce76dcc5dfcb6c25) | freelancer assigned |
+| `submit_milestone M1` | [`0xf4d2b63b…c75c9d6f`](https://explorer-studio.genlayer.com/tx/0xf4d2b63b5e100cb43d6b587ad55209ae693060e7958530f8688422ddc75c9d6f) | submitted with evidence |
+| `dispute_milestone M1` | [`0x8489ee59…ebd70c1`](https://explorer-studio.genlayer.com/tx/0x8489ee59c781afb62a26fbc5fa51c1769315a2f2d302ca48c111224e1ebd70c1) | client disputes |
+| `adjudicate_milestone M1` | [`0x5f15a59f…f451253b`](https://explorer-studio.genlayer.com/tx/0x5f15a59fa1e2ad3d31dca576515bab7c06b38820d5bdd2f986076846f451253b) | `split` — freelancer `1e14`, client `5e14` credited |
+| `submit_milestone M2` | [`0x21f0fe11…4391542d`](https://explorer-studio.genlayer.com/tx/0x21f0fe116488671d65b87bc5465192cae519bc19c9e5d94286b5dbdb4391542d) | submitted with evidence |
+| `approve_milestone M2` | [`0xe4976ecc…85fa4436`](https://explorer-studio.genlayer.com/tx/0xe4976ecc6cea95ca4af6e79a205b542f3cc293c743ab3a835e646ad585fa4436) | `release` — freelancer `4e14` credited |
+| `withdraw` (freelancer) | [`0x8848c6bb…ef0b4757`](https://explorer-studio.genlayer.com/tx/0x8848c6bb900e339f397cac015603aba0de75863848dcba26fa52e863ef0b4757) | `5e14` wei paid out as a real GEN transfer |
+| `withdraw` (client) | [`0xa1463941…f41f62f7`](https://explorer-studio.genlayer.com/tx/0xa1463941bb0697ca711cd4d9b4f4604d8af57fb977e7d65ce2bffad1f41f62f7) | `5e14` wei paid out as a real GEN transfer |
 
 ### The adjudication record returned on-chain
 
@@ -55,38 +58,42 @@ contract turned that classification into a settlement:
   "source": "adjudication",
   "deliverable_available": true,
   "evidence_available": true,
-  "confidence": 90,
+  "confidence": 92,
   "criteria": [
     {
       "index": 0,
       "criterion": "The page is served over HTTPS and returns an HTML document.",
       "verdict": "unclear",
-      "reason": "No evidence confirms the page was served over HTTPS."
+      "reason": "The retrieved deliverable is HTML content, but there is no reliable evidence here showing the page was served over HTTPS at the agreed URL."
     },
     {
       "index": 1,
       "criterion": "The page contains a visible top-level heading.",
       "verdict": "unmet",
-      "reason": "The HTML contains no visible top-level heading element."
+      "reason": "The delivered page snippet contains no visible top-level heading such as an <h1> element."
     },
     {
       "index": 2,
       "criterion": "The page lists at least three distinct product features.",
       "verdict": "unmet",
-      "reason": "The content does not list three distinct product features."
+      "reason": "The page text describes the example domain and warnings about its use, but it does not list at least three distinct product features."
     }
   ],
-  "freelancer_cut": 10000,
-  "client_cut": 50000,
-  "reasoning": "The deliverable provides HTML without a heading or feature list, and lacks protocol information. Therefore criteria 1 and 2 are clearly unmet, while criterion 0 cannot be verified."
+  "freelancer_cut": 100000000000000,
+  "client_cut": 500000000000000,
+  "reasoning": "The authoritative judgment should be based on the delivered page content, and that content is available as an HTML snippet. However, the snippet does not demonstrate HTTPS delivery, lacks a visible top-level heading, and does not include a three-feature product list, while the separate evidence appears to be an unrelated IANA reference page rather than the delivered landing page."
 }
 ```
 
-Settlement ledger and per-address track record read back from the contract:
+After settlement the ledger credited `5e14` wei to the freelancer and `5e14` wei to the
+client. Both then called `withdraw`, so the ledger and the escrow balance read back as:
 
 ```json
-{ "0x029ab4de…4a1532c": 50000, "0x5e5c124a…9966f3": 50000 }
+{ "0x5e5c124a…9966f3": 0, "0xed1fe303…ff99e8": 0 }
 ```
+
+`get_escrow_balance()` returns `0` — every escrowed wei left the contract for a real
+account.
 
 ```json
 { "released": 1, "refunded": 0, "split": 1, "disputes_raised": 0 }
@@ -97,10 +104,15 @@ client.
 
 ## Demo
 
-A 35-second walkthrough — posting the job, reading job #0 back from studionet, handing a
-dispute to the validators, the per-criterion ruling and the settlement ledger — is at
+A ~40-second walkthrough — posting a job and funding the escrow, reading job #0 back
+from studionet, handing a dispute to the validators, the per-criterion ruling with the
+wei-level settlement, and the withdrawable balances — is at
 [`docs/escrowcourt-demo.mp4`](docs/escrowcourt-demo.mp4), or streamed from the dApp URL
 above. Every frame is the real dApp talking to the deployed contract.
+
+The track-record slide reads a second job (`#1`) that was settled by client approval, so
+the freelancer's share is shown sitting in a withdrawable balance before `withdraw`
+moves it out of the contract.
 
 ## Why this needs GenLayer
 
@@ -132,8 +144,8 @@ The contract then computes:
 | anything else (mixed or `unclear`) | `split` | freelancer gets `amount × (2·met + unclear) / (2·n)` |
 
 A missing deliverable forces every affected criterion to `unclear`, so an unreachable
-URL can never quietly become a payout. That is why `M1` above settled at 10 000 out of
-60 000: one `unclear`, two `unmet`.
+URL can never quietly become a payout. That is why `M1` above settled at `1e14` out of
+`6e14`: one `unclear`, two `unmet`.
 
 ## Contract API
 
@@ -190,9 +202,13 @@ pip install -r requirements.txt
 # static check
 genvm-lint check contracts/escrow_court.py
 
-# 29 direct-mode unit tests
+# 28 direct-mode unit tests
 pytest tests/direct -v
 ```
+
+The screenshot and video tooling needs a few extra packages:
+`pip install pillow numpy opencv-python-headless playwright` (the capture scripts
+drive the Chrome already installed on the machine).
 
 The test suite covers the happy path plus every revert: bad milestone JSON, duplicate
 ids, shares that do not total 10 000 bps, thin criteria, a create call whose value does
@@ -221,10 +237,12 @@ result — address, trace, final job state, escrow balance, ledger and reputatio
 
 ```
 contracts/escrow_court.py        the Intelligent Contract
-tests/direct/test_escrow_court.py 29 direct-mode tests
+tests/direct/test_escrow_court.py 28 direct-mode tests
 docs/                            the dApp (GitHub Pages root) + the demo video
 tools/deploy_and_demo.py         deploy + full lifecycle (escrow, adjudication, payouts) on studionet
+tools/extra_demo.py              fund one more job and release it (leaves a live withdrawable balance)
 tools/make_demo.py               compose the demo video from dApp screenshots
+tools/shoot.py                   capture the dApp screenshots with headless Chrome
 ```
 
 ## License

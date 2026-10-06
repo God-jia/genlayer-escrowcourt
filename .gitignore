@@ -5,3 +5,4 @@ __pycache__/
 .env
 artifacts/
 tools/.deploy_key
+tools/.freelancer_key
