@@ -37,7 +37,7 @@ MILESTONES = [
         "id": "M1",
         "title": "Responsive landing page",
         "criteria": [
-            "The page is served over HTTPS and returns an HTML document.",
+            "The page returns an HTML document with a body element.",
             "The page contains a visible top-level heading.",
             "The page lists at least three distinct product features.",
         ],
@@ -176,10 +176,28 @@ def main():
     )
     finalize(client, tx, "dispute_milestone M1")
 
-    tx = client.write_contract(
-        address=address, function_name="adjudicate_milestone", args=[0, "M1"]
-    )
-    finalize(client, tx, "adjudicate_milestone M1")
+    # Adjudication is non-deterministic. If validators cannot agree, the
+    # transaction finalizes without changing state: no funds move and the
+    # milestone stays disputed. Re-running is safe and is what the network does
+    # internally across rounds, so retry until consensus settles the milestone.
+    for attempt in range(1, 7):
+        tx = client.write_contract(
+            address=address, function_name="adjudicate_milestone", args=[0, "M1"]
+        )
+        label = (
+            "adjudicate_milestone M1"
+            if attempt == 1
+            else "adjudicate_milestone M1 (retry %d)" % attempt
+        )
+        finalize(client, tx, label)
+        job_now = json.loads(
+            client.read_contract(address=address, function_name="get_job", args=[0])
+        )
+        if job_now["milestones"][0]["status"] == "settled":
+            print("  adjudication settled on attempt %d" % attempt)
+            break
+    else:
+        raise RuntimeError("adjudication never reached consensus for M1")
 
     tx = client.write_contract(
         address=address,

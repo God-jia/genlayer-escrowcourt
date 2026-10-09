@@ -145,7 +145,7 @@ def end_card():
     rows = [
         ("REPOSITORY", "github.com/God-jia/genlayer-escrowcourt"),
         ("dApp", "god-jia.github.io/genlayer-escrowcourt"),
-        ("CONTRACT", "0x5b6712CF7ec4509680e9803bAa1640E54D8176B5"),
+        ("CONTRACT", "0x3c065996BF808161c1A52eD7cFc52A6b2401d7A3"),
         ("NETWORK", "studionet  ·  chain ID 61999"),
     ]
     y = 250
@@ -184,7 +184,7 @@ BULLETS = {
         ("A verdict per criterion",
          "The model labels each criterion met / unmet / unclear — it never picks a number."),
         ("The split is derived in code",
-         "One unclear and two unmet map deterministically to split: freelancer 1e14 wei, client 5e14 wei."),
+         "Two met and one unmet map deterministically to split: freelancer 4e14 wei, client 2e14 wei."),
     ],
     5: [
         ("Settled shares become withdrawable",
@@ -211,7 +211,7 @@ def build():
                             "Adjudicate tab — permissionless trigger of the validator round.",
                             "escrow-3-adjudicate.jpg"))
     slides.append(shot_card(4, "Verdicts in, settlement out",
-                            "Ruling — criteria classified unclear / unmet / unmet, split derived in code.",
+                            "Ruling — criteria classified met / met / unmet, split derived in code.",
                             "escrow-5-ruling.jpg"))
     slides.append(shot_card(5, "Real GEN in, real GEN out",
                             "Track record — withdrawable balance, escrow held by the contract and per-address reputation.",

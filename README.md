@@ -24,11 +24,11 @@ settled share or a refund becomes withdrawable, and the payee pulls it out with
 
 | | |
 |---|---|
-| Contract | [`0x5b6712CF7ec4509680e9803bAa1640E54D8176B5`](https://explorer-studio.genlayer.com/address/0x5b6712CF7ec4509680e9803bAa1640E54D8176B5) |
+| Contract | [`0x3c065996BF808161c1A52eD7cFc52A6b2401d7A3`](https://explorer-studio.genlayer.com/address/0x3c065996BF808161c1A52eD7cFc52A6b2401d7A3) |
 | Network | studionet (chain ID 61999) |
 | dApp | <https://god-jia.github.io/genlayer-escrowcourt/> |
 | Demo video | <https://god-jia.github.io/genlayer-escrowcourt/escrowcourt-demo.mp4> |
-| Deploy tx | [`0xeef12d39…0db5a45`](https://explorer-studio.genlayer.com/tx/0xeef12d39a011ea54920315d656ccd500d0e3ba8a4bf072a23b426e40d0db5a45) |
+| Deploy tx | [`0xfb8d2ba1…df29a6a`](https://explorer-studio.genlayer.com/tx/0xfb8d2ba1ad46645e0ed3d89ede5369d14649530d02ee7a45c320a7bd4df29a6a) |
 | Escrow amount | `1e15` wei, sent with the `create_job` transaction |
 
 The full lifecycle below was executed against studionet with real validators, real web
@@ -36,17 +36,17 @@ fetches and a real LLM round — not a simulation.
 
 | Step | Transaction | Result |
 |---|---|---|
-| `deploy` | [`0xeef12d39…0db5a45`](https://explorer-studio.genlayer.com/tx/0xeef12d39a011ea54920315d656ccd500d0e3ba8a4bf072a23b426e40d0db5a45) | `EscrowCourt` deployed |
-| `create_job` (payable, `1e15` wei) | [`0xa0f6f8ed…ce67667f`](https://explorer-studio.genlayer.com/tx/0xa0f6f8ed1d5b9d8ac0a8afa9c91b128a35b90735e708351ba57c2758ce67667f) | job #0 funded by the contract; milestones `M1` (6000 bps) + `M2` (4000 bps) |
-| `accept_job` | [`0x417dfb68…ba7938d1`](https://explorer-studio.genlayer.com/tx/0x417dfb682b191bea45480b23eefe5bdab4ed6fa29643cfad0d3b723fba7938d1) | freelancer assigned |
-| `submit_milestone M1` | [`0x9f7d1be2…5dd3541b`](https://explorer-studio.genlayer.com/tx/0x9f7d1be20a8a6f1fce354a1509e7e92ef05a9a97ddb22fb238cc3c6d5dd3541b) | submitted with evidence |
-| `dispute_milestone M1` | [`0x17db3085…26e98266`](https://explorer-studio.genlayer.com/tx/0x17db3085a4c47a2bfabc73edf9ec81cb65abedb93a5f2935542f0de326e98266) | client disputes |
-| `adjudicate_milestone M1` | [`0x9190e202…9b3362c6`](https://explorer-studio.genlayer.com/tx/0x9190e202bfceb92c0eb2444f61fd5cd08c216bf33631ba2557a4bc799b3362c6) | `split` — freelancer `1e14`, client `5e14` credited |
-| `submit_milestone M2` | [`0xaaa29c8b…41a06b99`](https://explorer-studio.genlayer.com/tx/0xaaa29c8bdfd20f51033de0201da39f8a3021387798e33335e4ae269641a06b99) | submitted with evidence |
-| `approve_milestone M2` | [`0xbb9751be…0e4b3965`](https://explorer-studio.genlayer.com/tx/0xbb9751be6a07d0b58aeb95a8404d69f8a59bc8f2895c2536bd43bef50e4b3965) | `release` — freelancer `4e14` credited |
-| `withdraw` (freelancer) | [`0x7bf45510…ae3234fa`](https://explorer-studio.genlayer.com/tx/0x7bf4551043daffb8e73b299271d2dfdfeee02fa1014f8e3a0b45b3fcae3234fa) | `5e14` wei paid out as a real GEN transfer |
-| `withdraw` (client) | [`0x9973f716…577a80`](https://explorer-studio.genlayer.com/tx/0x9973f7164cb23b4283cce6125c2852d0bfb66257326eee1188ec766e71577a80) | `5e14` wei paid out as a real GEN transfer |
-| `withdraw` (drained) | [`0xe4661d5f…8929d15`](https://explorer-studio.genlayer.com/tx/0xe4661d5ffbb0c85e7435e1cea9abd1e7e8798bf25122f520d3677c1f48929d15) | called again with nothing left — `SUCCESS`, returns `0` instead of a GenVM error |
+| `deploy` | [`0xfb8d2ba1…df29a6a`](https://explorer-studio.genlayer.com/tx/0xfb8d2ba1ad46645e0ed3d89ede5369d14649530d02ee7a45c320a7bd4df29a6a) | `EscrowCourt` deployed |
+| `create_job` (payable, `1e15` wei) | [`0x577f0ad4…23dda879`](https://explorer-studio.genlayer.com/tx/0x577f0ad4613c99bb62da17a4501ba1010b5fd230deafe3c5626100b423dda879) | job #0 funded by the contract; milestones `M1` (6000 bps) + `M2` (4000 bps) |
+| `accept_job` | [`0x8f8fb12b…71affe434`](https://explorer-studio.genlayer.com/tx/0x8f8fb12b00af8d90347306cf9428b7aa56ceb1aba6db1db162668da71affe434) | freelancer assigned |
+| `submit_milestone M1` | [`0x738e8164…3521f58e`](https://explorer-studio.genlayer.com/tx/0x738e8164b8abcf76ce98ce47787d304c06142825e19b27ee5cff95143521f58e) | submitted with evidence |
+| `dispute_milestone M1` | [`0xdbfed7d2…1d663972`](https://explorer-studio.genlayer.com/tx/0xdbfed7d20b8646c007f7f6bb9c1a7791725faeea2bb6e218a97585bf1d663972) | client disputes |
+| `adjudicate_milestone M1` | [`0xe7511a90…ddff36bf7`](https://explorer-studio.genlayer.com/tx/0xe7511a90a8ec42131bebfe9511cbab2d12657ab40d8f3c7d5dbfc30ddff36bf7) | `split` — freelancer `4e14`, client `2e14` credited |
+| `submit_milestone M2` | [`0xb6394087…dc124fe5`](https://explorer-studio.genlayer.com/tx/0xb6394087ff3090fa5bc76fc2b45d35d0007ba52bb4aab950a0bb8c88dc124fe5) | submitted with evidence |
+| `approve_milestone M2` | [`0x05a0b8b0…dddc005a`](https://explorer-studio.genlayer.com/tx/0x05a0b8b082fd9dc5cb1c1826084f05ef83f83d3fb9f770796da6b1b8dddc005a) | `release` — freelancer `4e14` credited |
+| `withdraw` (freelancer) | [`0xe55c75b3…cabb4580`](https://explorer-studio.genlayer.com/tx/0xe55c75b38a6c975625f93e1b8159e5cdbe2288570537727cd8ff92e4cabb4580) | `8e14` wei paid out as a real GEN transfer — the freelancer's wallet balance rises by exactly `8e14` |
+| `withdraw` (client) | [`0xb6ede07f…1a8db33c49`](https://explorer-studio.genlayer.com/tx/0xb6ede07fbbd2f54a641c6d85e3a5e185be12fdf028bf718b74769d1a8db33c49) | `2e14` wei paid out as a real GEN transfer |
+| `withdraw` (drained) | [`0x2a9a70ad…e4bf4828f5b`](https://explorer-studio.genlayer.com/tx/0x2a9a70ad204773f05fe9b591cfc6f7872f85eb1833c25441c2e46e4bf4828f5b) | called again with nothing left — `SUCCESS`, returns `0` instead of a GenVM error |
 
 ### The adjudication record returned on-chain
 
@@ -59,42 +59,44 @@ contract turned that classification into a settlement:
   "source": "adjudication",
   "deliverable_available": true,
   "evidence_available": true,
-  "confidence": 88,
+  "confidence": 100,
   "criteria": [
     {
       "index": 0,
-      "criterion": "The page is served over HTTPS and returns an HTML document.",
-      "verdict": "unclear",
-      "reason": "The deliverable HTML was retrieved and appears to be served from a domain that typically uses HTTPS, but the fetch metadata does not explicitly confirm the HTTPS scheme or a 200 OK response."
+      "criterion": "The page returns an HTML document with a body element.",
+      "verdict": "met",
+      "reason": "The evidence provided contains a complete HTML structure including a body element wrapping the content."
     },
     {
       "index": 1,
       "criterion": "The page contains a visible top-level heading.",
-      "verdict": "unmet",
-      "reason": "The delivered page contains no heading element (h1, h2, etc.); it consists only of an SVG icon, several paragraph elements in multiple languages, a link, and a script tag."
+      "verdict": "met",
+      "reason": "The page contains a visible <h1> element with the text 'Example Domains'."
     },
     {
       "index": 2,
       "criterion": "The page lists at least three distinct product features.",
       "verdict": "unmet",
-      "reason": "The delivered page lists no product features whatsoever; it is a generic IANA example-domain placeholder page with informational text about the domain's purpose."
+      "reason": "The page describes the purpose of example domains but fails to list three distinct product features as required by the brief."
     }
   ],
-  "freelancer_cut": 100000000000000,
-  "client_cut": 500000000000000,
-  "reasoning": "The deliverable is clearly the default IANA example-domain placeholder page, not a custom-built landing page. It contains no heading and no enumeration of product features, failing criteria 1 and 2 outright. The HTTPS criterion is plausible given the domain but cannot be confirmed from the evidence provided, so it is marked unclear rather than met."
+  "freelancer_cut": 400000000000000,
+  "client_cut": 200000000000000,
+  "reasoning": "The freelancer provided the source code of the IANA example page as evidence of delivery. While the technical HTML structure and heading requirements are met, the content is purely informational regarding domain usage and lacks the specific 'three distinct product features' mandated in the authoritative job brief."
 }
 ```
 
-After settlement the ledger credited `5e14` wei to the freelancer and `5e14` wei to the
+After settlement the ledger credited `4e14` wei to the freelancer and `2e14` wei to the
 client. Both then called `withdraw`, so the ledger and the escrow balance read back as:
 
 ```json
-{ "0x5e5c124a…9966f3": 0, "0x969c9ea4…462234": 0 }
+{ "0x5e5c124a…9966f3": 0, "0xd41f5ef7…9679981": 0 }
 ```
 
 `get_escrow_balance()` returns `0` — every escrowed wei left the contract for a real
-account.
+account. The freelancer's wallet balance moved from `1e18` before the withdraw to
+`1e18 + 8e14` after it, which is the on-chain proof that the payout is a real transfer
+and not only a ledger entry.
 
 ```json
 { "released": 1, "refunded": 0, "split": 1, "disputes_raised": 0 }
@@ -145,8 +147,8 @@ The contract then computes:
 | anything else (mixed or `unclear`) | `split` | freelancer gets `amount × (2·met + unclear) / (2·n)` |
 
 A missing deliverable forces every affected criterion to `unclear`, so an unreachable
-URL can never quietly become a payout. That is why `M1` above settled at `1e14` out of
-`6e14`: one `unclear`, two `unmet`.
+URL can never quietly become a payout. That is why `M1` above settled at `4e14` out of
+`6e14`: two `met`, one `unmet`.
 
 ## Contract API
 

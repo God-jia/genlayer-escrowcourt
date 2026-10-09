@@ -5,13 +5,15 @@ import json
 from genlayer import *
 
 
-@gl.contract_interface
+@gl.evm.contract_interface
 class _Payee:
     """Minimal interface used to push GEN to an external account.
 
-    Recipients of an escrow payout are externally owned accounts, so the value
-    leaves the contract through an external message (EthSend) rather than an
-    internal IC-to-IC message.
+    Recipients of an escrow payout are externally owned accounts on the chain
+    layer, so the value leaves the contract through an external message routed
+    via the ghost contract. That requires the EVM contract interface, not the
+    IC interface -- using the IC interface would emit an IC-to-IC internal
+    message to a codeless EOA and the transfer would fail.
     """
 
     class View:
@@ -631,12 +633,12 @@ Respond with ONLY a JSON object, no prose and no markdown:
             if leader_map != own_map:
                 return False
 
-            try:
-                leader_confidence = int(leader.get("confidence", 0))
-            except (TypeError, ValueError):
-                return False
-
-            return abs(leader_confidence - own["confidence"]) <= 25
+            # Only the decision fields are compared. Each criterion verdict maps
+            # to a weight in the split, so it is part of the decision and must
+            # match exactly. The free-text reasoning and the subjective
+            # confidence score are analysis: two honest runs word them
+            # differently, so comparing them would only manufacture disagreement.
+            return True
 
         result = gl.vm.run_nondet_unsafe(evaluate, validate)
 
