@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timedelta, timezone
 
 MILESTONES = [
     {
@@ -31,6 +32,19 @@ CLAIM = (
     "anywhere, so the milestone is not complete."
 )
 AMOUNT = 100000
+
+DAY = 24 * 60 * 60
+EPOCH = datetime(2026, 1, 1, tzinfo=timezone.utc)
+BASE_EPOCH = int(EPOCH.timestamp())
+
+
+def _at(seconds):
+    """ISO-8601 timestamp *seconds* after the fixed test epoch."""
+    return (EPOCH + timedelta(seconds=seconds)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _warp(direct_vm, seconds):
+    direct_vm.warp(_at(seconds))
 
 
 def _deploy(direct_deploy):
@@ -556,3 +570,303 @@ def test_reputation_starts_at_zero(direct_vm, direct_deploy, direct_alice, direc
         "disputes_raised": 0,
     }
     assert contract.get_balance(bob) == 0
+
+
+# ------------------------------------------------------------------ recovery
+
+
+def test_default_windows_are_exposed(direct_vm, direct_deploy):
+    contract = _deploy(direct_deploy)
+
+    assert json.loads(contract.get_terms()) == {
+        "accept_window": 7 * DAY,
+        "submit_window": 14 * DAY,
+        "review_window": 7 * DAY,
+        "ruling_window": 7 * DAY,
+    }
+
+
+def test_windows_are_configurable_at_deploy(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    contract = direct_deploy("contracts/escrow_court.py", 60, 120, 60, 60)
+    assert json.loads(contract.get_terms())["submit_window"] == 120
+
+    _warp(direct_vm, 0)
+    job_id, alice, _bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+
+    _warp(direct_vm, 121)
+    direct_vm.sender = direct_alice
+    contract.resolve_stalled_milestone(job_id, "M1")
+    assert contract.get_balance(alice) == 60000
+
+
+def test_windows_below_the_floor_are_rejected(direct_vm, direct_deploy):
+    with direct_vm.expect_revert("at least 60 seconds"):
+        direct_deploy("contracts/escrow_court.py", 0, 120, 60, 60)
+
+
+def test_expire_open_job_refunds_a_job_nobody_accepted(
+    direct_vm, direct_deploy, direct_alice, direct_charlie
+):
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id = _create(contract, direct_vm, direct_alice)
+    alice = _client(contract, job_id)
+
+    # Anyone can finalise an abandoned job once its accept window closes.
+    _warp(direct_vm, 7 * DAY + 1)
+    direct_vm.sender = direct_charlie
+    contract.expire_open_job(job_id)
+
+    record = json.loads(contract.get_job(job_id))
+    assert record["status"] == "expired"
+    assert record["escrowed"] == 0
+    assert contract.get_balance(alice) == AMOUNT
+
+
+def test_expire_open_job_before_the_deadline_reverts(
+    direct_vm, direct_deploy, direct_alice
+):
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id = _create(contract, direct_vm, direct_alice)
+
+    _warp(direct_vm, 6 * DAY)
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("accept window has not closed"):
+        contract.expire_open_job(job_id)
+
+
+def test_expire_open_job_rejects_an_accepted_job(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id, _alice, _bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+
+    _warp(direct_vm, 8 * DAY)
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("Only an open job can expire"):
+        contract.expire_open_job(job_id)
+
+
+def test_resolve_pending_milestone_refunds_the_client(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id, alice, bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+
+    # The freelancer never delivers, so after the submission window the client
+    # reclaims that milestone's share.
+    _warp(direct_vm, 14 * DAY + 1)
+    direct_vm.sender = direct_alice
+    contract.resolve_stalled_milestone(job_id, "M1")
+
+    record = json.loads(contract.get_job(job_id))
+    milestone = record["milestones"][0]
+    assert milestone["status"] == "expired"
+    assert milestone["resolution"] == "refund"
+    assert milestone["ruling"]["source"] == "timeout"
+    assert milestone["ruling"]["elapsed_window"] == "pending"
+    assert contract.get_balance(alice) == 60000
+    assert contract.get_balance(bob) == 0
+
+
+def test_resolve_pending_milestone_before_the_deadline_reverts(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id, _alice, _bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+
+    _warp(direct_vm, 13 * DAY)
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("deadline has not passed"):
+        contract.resolve_stalled_milestone(job_id, "M1")
+
+
+def test_resolve_submitted_milestone_pays_the_freelancer(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id, alice, bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+    _submit(contract, direct_vm, direct_bob, job_id)
+
+    # The client neither approves nor disputes: the freelancer is still paid.
+    _warp(direct_vm, 7 * DAY + 1)
+    direct_vm.sender = direct_bob
+    contract.resolve_stalled_milestone(job_id, "M1")
+
+    record = json.loads(contract.get_job(job_id))
+    milestone = record["milestones"][0]
+    assert milestone["status"] == "expired"
+    assert milestone["resolution"] == "release"
+    assert milestone["ruling"]["elapsed_window"] == "submitted"
+    assert contract.get_balance(bob) == 60000
+    assert contract.get_balance(alice) == 0
+
+
+def test_resolve_disputed_milestone_splits_evenly(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id, alice, bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+    _submit(contract, direct_vm, direct_bob, job_id)
+    _dispute(contract, direct_vm, direct_alice, job_id)
+
+    # Adjudication never settles the dispute; the ruling window forces a split.
+    _warp(direct_vm, 7 * DAY + 1)
+    direct_vm.sender = direct_alice
+    contract.resolve_stalled_milestone(job_id, "M1")
+
+    record = json.loads(contract.get_job(job_id))
+    milestone = record["milestones"][0]
+    assert milestone["status"] == "expired"
+    assert milestone["resolution"] == "split"
+    assert milestone["ruling"]["elapsed_window"] == "disputed"
+    assert contract.get_balance(bob) == 30000
+    assert contract.get_balance(alice) == 30000
+
+
+def test_resolve_stalled_milestone_is_permissionless(
+    direct_vm, direct_deploy, direct_alice, direct_bob, direct_charlie
+):
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id, alice, _bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+
+    _warp(direct_vm, 14 * DAY + 1)
+    direct_vm.sender = direct_charlie
+    contract.resolve_stalled_milestone(job_id, "M1")
+
+    assert contract.get_balance(alice) == 60000
+
+
+def test_resolve_stalled_milestone_rejects_a_settled_milestone(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id, _alice, _bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+    _submit(contract, direct_vm, direct_bob, job_id)
+
+    direct_vm.sender = direct_alice
+    contract.approve_milestone(job_id, "M1")
+
+    _warp(direct_vm, 30 * DAY)
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("already settled"):
+        contract.resolve_stalled_milestone(job_id, "M1")
+
+
+def test_resolve_stalled_milestone_requires_an_active_job(
+    direct_vm, direct_deploy, direct_alice
+):
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id = _create(contract, direct_vm, direct_alice)
+
+    _warp(direct_vm, 30 * DAY)
+    direct_vm.sender = direct_alice
+    with direct_vm.expect_revert("job is not active"):
+        contract.resolve_stalled_milestone(job_id, "M1")
+
+
+def test_deadline_renews_after_a_milestone_settles(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id, _alice, _bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+
+    before = json.loads(contract.get_job(job_id))["milestones"][1]["due_at"]
+    assert before == BASE_EPOCH + 14 * DAY
+
+    # A late approval on M1 pushes M2's deadline out, so a slow review on an
+    # early milestone cannot quietly expire the work still to be delivered.
+    _warp(direct_vm, 2 * DAY)
+    _submit(contract, direct_vm, direct_bob, job_id, "M1")
+    direct_vm.sender = direct_alice
+    contract.approve_milestone(job_id, "M1")
+
+    after = json.loads(contract.get_job(job_id))["milestones"][1]["due_at"]
+    assert after == BASE_EPOCH + 2 * DAY + 14 * DAY
+
+
+def test_client_cannot_strand_the_freelancer(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    """Adversarial: a client that refuses to approve or dispute still cannot
+    hold the freelancer's money forever."""
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id, _alice, bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+    _submit(contract, direct_vm, direct_bob, job_id, "M1")
+
+    # The client goes silent and the milestone sits submitted.
+    _warp(direct_vm, 7 * DAY)
+    assert json.loads(contract.get_job(job_id))["milestones"][0]["status"] == "submitted"
+
+    # Once the review window closes the freelancer is paid without the client.
+    _warp(direct_vm, 7 * DAY + 1)
+    direct_vm.sender = direct_bob
+    contract.resolve_stalled_milestone(job_id, "M1")
+
+    assert contract.get_balance(bob) == 60000
+    direct_vm.sender = direct_bob
+    assert contract.withdraw() == 60000
+    assert contract.get_balance(bob) == 0
+
+
+def test_freelancer_cannot_strand_the_client(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    """Adversarial: a freelancer that accepts and disappears still cannot hold
+    the client's escrow forever."""
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id, alice, _bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+
+    # The freelancer never submits anything at all.
+    _warp(direct_vm, 14 * DAY + 1)
+    direct_vm.sender = direct_alice
+    contract.resolve_stalled_milestone(job_id, "M1")
+    contract.resolve_stalled_milestone(job_id, "M2")
+
+    record = json.loads(contract.get_job(job_id))
+    assert record["status"] == "completed"
+    assert all(m["status"] == "expired" for m in record["milestones"])
+    assert contract.get_balance(alice) == AMOUNT
+
+    direct_vm.sender = direct_alice
+    assert contract.withdraw() == AMOUNT
+    assert contract.get_balance(alice) == 0
+
+
+def test_a_dispute_cannot_freeze_the_escrow(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    """Adversarial: a dispute that is never adjudicated still cannot lock the
+    escrow, because the ruling window forces a deterministic split."""
+    contract = _deploy(direct_deploy)
+    _warp(direct_vm, 0)
+    job_id, alice, bob = _active_job(contract, direct_vm, direct_alice, direct_bob)
+    _submit(contract, direct_vm, direct_bob, job_id, "M1")
+    _dispute(contract, direct_vm, direct_alice, job_id, "M1")
+
+    _warp(direct_vm, 7 * DAY + 1)
+    direct_vm.sender = direct_bob
+    contract.resolve_stalled_milestone(job_id, "M1")
+
+    assert contract.get_balance(bob) == 30000
+    assert contract.get_balance(alice) == 30000
+
+    direct_vm.sender = direct_bob
+    assert contract.withdraw() == 30000
+    direct_vm.sender = direct_alice
+    assert contract.withdraw() == 30000
+    assert contract.get_escrow_balance() == 0

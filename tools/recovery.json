@@ -1,0 +1,160 @@
+{
+  "contract": "0xc088C31d0fEF9B166D1fa2461Ae7c5D5c5F6B340",
+  "deploy_tx": "0x9ebfe3799fe2c5a1fad0142339ccd07e3a81aa99b847e9478c6ebcbbfe315f64",
+  "windows_seconds": [
+    60,
+    60,
+    60,
+    60
+  ],
+  "client": "0x5E5C124A132CDA6d47A110706AC1A5B9739966f3",
+  "freelancer": "0x28FB0FC1C0Db025c8Ae9828ED5A54F1FaaD2DD13",
+  "escrow_amount_wei": 1000000000000000,
+  "escrow_balance_wei": "0",
+  "client_balance_wei": "989100000000000000",
+  "freelancer_balance_wei": "1001500000000000000",
+  "jobs": {
+    "A": {
+      "job_id": 0,
+      "status": "expired",
+      "milestone_status": "pending",
+      "resolution": null,
+      "ruling": null
+    },
+    "B": {
+      "job_id": 1,
+      "status": "completed",
+      "milestone_status": "expired",
+      "resolution": "refund",
+      "ruling": {
+        "client_cut": 1000000000000000,
+        "deadline": 1791576478,
+        "elapsed_window": "pending",
+        "freelancer_cut": 0,
+        "reasoning": "The freelancer did not submit this milestone before the submission window closed, so the escrow share returns to the client.",
+        "resolved_at": 1791576846,
+        "result": "refund",
+        "source": "timeout"
+      }
+    },
+    "C": {
+      "job_id": 2,
+      "status": "completed",
+      "milestone_status": "expired",
+      "resolution": "release",
+      "ruling": {
+        "client_cut": 0,
+        "deadline": 1791576600,
+        "elapsed_window": "submitted",
+        "freelancer_cut": 1000000000000000,
+        "reasoning": "The client neither approved nor disputed this milestone before the review window closed, so the freelancer is paid in full.",
+        "resolved_at": 1791576886,
+        "result": "release",
+        "source": "timeout"
+      }
+    },
+    "D": {
+      "job_id": 3,
+      "status": "completed",
+      "milestone_status": "expired",
+      "resolution": "split",
+      "ruling": {
+        "client_cut": 500000000000000,
+        "deadline": 1791576755,
+        "elapsed_window": "disputed",
+        "freelancer_cut": 500000000000000,
+        "reasoning": "This dispute was not adjudicated before the ruling window closed, so the escrow share is split evenly to release the funds.",
+        "resolved_at": 1791576926,
+        "result": "split",
+        "source": "timeout"
+      }
+    }
+  },
+  "trace": [
+    {
+      "step": "deploy",
+      "tx": "0x9ebfe3799fe2c5a1fad0142339ccd07e3a81aa99b847e9478c6ebcbbfe315f64",
+      "result": "None"
+    },
+    {
+      "step": "create_job: Abandoned before acceptance",
+      "tx": "0x200f79ca38bffc6bc7a0bb14dec24874a706510b1b000541e48be8ecf541bf5c",
+      "result": "None"
+    },
+    {
+      "step": "create_job: Abandoned by the freelancer",
+      "tx": "0x47c5ef4991e7e7fc86057c2b2fbfbaf622208227a5be5442039b1a51b226a9e2",
+      "result": "None"
+    },
+    {
+      "step": "accept_job (job 1)",
+      "tx": "0x63854afcf3f4e354c559b3b42e96eaa54f49873e56f49dd16a5a9e9af6d6b46a",
+      "result": "None"
+    },
+    {
+      "step": "create_job: Ignored by the client",
+      "tx": "0x0e19f3fa4638856859e8ea2ddbfb37be21913fbfa4f765079fb6772eefc5cbc4",
+      "result": "None"
+    },
+    {
+      "step": "accept_job (job 2)",
+      "tx": "0xaec4fc80c455cbca117c27c7607d22e784b87558c3f82d06e385e5f8b2001872",
+      "result": "None"
+    },
+    {
+      "step": "submit_milestone M1 (job 2)",
+      "tx": "0xfc56220e9551ecc3f8372507dfb274ca904bcbcb6ac366756afd2a4f510e6ed1",
+      "result": "None"
+    },
+    {
+      "step": "create_job: Dispute nobody adjudicates",
+      "tx": "0x1b014ed3f9b6a1216b5913108ba9ca700ab5d66c6891b0b0e6a81d8239995a24",
+      "result": "None"
+    },
+    {
+      "step": "accept_job (job 3)",
+      "tx": "0x7c4875816dff058291d52ba584d91a58d5bfa6f492fc4cb7f1ec79aa7d11cc73",
+      "result": "None"
+    },
+    {
+      "step": "submit_milestone M1 (job 3)",
+      "tx": "0x058a436ae84ea809c7d248b0b3f9710f60e0af9913f7790e4c4981fa035b0944",
+      "result": "None"
+    },
+    {
+      "step": "dispute_milestone M1 (job 3)",
+      "tx": "0x8d2a133b8bf365dc72c8d899a55511a49494b975828c2323fb40f630ff812693",
+      "result": "None"
+    },
+    {
+      "step": "expire_open_job (job 0)",
+      "tx": "0x2d5836878af538108f33aac2ad9ce7b398100f6a055655671f0476d4a601f61a",
+      "result": "None"
+    },
+    {
+      "step": "resolve_stalled_milestone (job 1: pending)",
+      "tx": "0xbda7cc9eb4eb58780905b8acb84257ae59686acf7a935b441398a4086a06da55",
+      "result": "None"
+    },
+    {
+      "step": "resolve_stalled_milestone (job 2: submitted)",
+      "tx": "0xdb46eb3a8302334908fa3323b14848930c53b730d2fb05cb7b022486283af5a1",
+      "result": "None"
+    },
+    {
+      "step": "resolve_stalled_milestone (job 3: disputed)",
+      "tx": "0x417b7162bb205ce7acd5e47d77bd5220fae1e4baebf6b9432ebde7b1239145e2",
+      "result": "None"
+    },
+    {
+      "step": "withdraw (client)",
+      "tx": "0xfa5b963446afded36c88e00f787d4725bf4b91b00223c2f4ac10df3ec5c72f63",
+      "result": "None"
+    },
+    {
+      "step": "withdraw (freelancer)",
+      "tx": "0xea2c3de5577877fbc1160f4c9a3b0c695ddde16bbc2ca7058a97ce4ff14d3e61",
+      "result": "None"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 
 import json
+from datetime import datetime, timezone
 
 from genlayer import *
 
@@ -34,6 +35,25 @@ MAX_EVIDENCE_CHARS = 8000
 MAX_REASON_CHARS = 600
 BPS_DENOMINATOR = 10000
 
+# Every waiting state has a deadline so that no milestone can sit unresolved
+# forever. Once a deadline passes, anyone may settle the milestone through
+# ``resolve_stalled_milestone`` and the escrow is guaranteed to move.
+#
+# The windows are set once, when the escrow service is deployed, because
+# different jobs need different service levels. They are part of the published
+# terms: a freelancer can read them from any job before accepting. The floor
+# keeps a window from being zero, which would let one side settle instantly.
+DEFAULT_ACCEPT_WINDOW = 7 * 24 * 60 * 60
+DEFAULT_SUBMIT_WINDOW = 14 * 24 * 60 * 60
+DEFAULT_REVIEW_WINDOW = 7 * 24 * 60 * 60
+DEFAULT_RULING_WINDOW = 7 * 24 * 60 * 60
+MIN_WINDOW_SECONDS = 60
+
+# A milestone is done once it reaches one of these states; only then is the
+# escrow share no longer at risk of being stuck.
+TERMINAL_MILESTONE_STATUSES = ("released", "settled", "expired")
+WAITING_MILESTONE_STATUSES = ("pending", "submitted", "disputed")
+
 
 def _is_http_url(value: str) -> bool:
     return value.startswith("http://") or value.startswith("https://")
@@ -46,6 +66,45 @@ def _is_address(value: str) -> bool:
         if ch not in "0123456789abcdef":
             return False
     return True
+
+
+def _parse_epoch(stamp: str) -> int:
+    """Turn an ISO-8601 transaction timestamp into epoch seconds.
+
+    The datetime comes from the protocol message, so every validator sees the
+    exact same string; parsing it here keeps the deadline math deterministic.
+    """
+    text = str(stamp).strip()
+    if not text:
+        return 0
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        moment = datetime.fromisoformat(text)
+    except ValueError:
+        return 0
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return int(moment.timestamp())
+
+
+def _now() -> int:
+    """Epoch seconds of the current transaction (deterministic)."""
+    try:
+        stamp = gl.message_raw["datetime"]
+    except (KeyError, TypeError):
+        return 0
+    return _parse_epoch(stamp)
+
+
+def _parse_window(value, name: str) -> int:
+    try:
+        window = int(value)
+    except (TypeError, ValueError):
+        raise gl.vm.UserError("%s must be a whole number of seconds" % name)
+    if window < MIN_WINDOW_SECONDS:
+        raise gl.vm.UserError("%s must be at least %d seconds" % (name, MIN_WINDOW_SECONDS))
+    return window
 
 
 def _parse_milestones(raw: str) -> list:
@@ -106,6 +165,7 @@ def _parse_milestones(raw: str) -> list:
                 "criteria": criteria,
                 "share_bps": share_bps,
                 "status": "pending",
+                "due_at": 0,
                 "evidence_url": "",
                 "submission_note": "",
                 "dispute_claim": "",
@@ -206,18 +266,39 @@ class EscrowCourt(gl.Contract):
     refunds credit a withdrawable balance, and ``withdraw`` pushes that balance
     to the payee's account as a real GEN transfer. The per-address track record
     is kept alongside the money.
+
+    Recovery: every waiting state carries a deadline, so escrow can always be
+    released even if a party walks away. ``expire_open_job`` refunds a job that
+    is never accepted, and ``resolve_stalled_milestone`` settles a milestone
+    whose delivery, review, or adjudication window has closed. Both are
+    permissionless and their outcome is fixed by the milestone's state alone,
+    so neither the client nor the freelancer can lock funds indefinitely.
     """
 
     jobs: TreeMap[u256, str]
     ledger: str
     reputation: str
     next_job_id: u256
+    accept_window: u256
+    submit_window: u256
+    review_window: u256
+    ruling_window: u256
 
-    def __init__(self):
+    def __init__(
+        self,
+        accept_window: u256 = DEFAULT_ACCEPT_WINDOW,
+        submit_window: u256 = DEFAULT_SUBMIT_WINDOW,
+        review_window: u256 = DEFAULT_REVIEW_WINDOW,
+        ruling_window: u256 = DEFAULT_RULING_WINDOW,
+    ):
         self.jobs = TreeMap()
         self.ledger = "{}"
         self.reputation = "{}"
         self.next_job_id = 0
+        self.accept_window = _parse_window(accept_window, "accept_window")
+        self.submit_window = _parse_window(submit_window, "submit_window")
+        self.review_window = _parse_window(review_window, "review_window")
+        self.ruling_window = _parse_window(ruling_window, "ruling_window")
 
     # ------------------------------------------------------------------ helpers
 
@@ -295,12 +376,85 @@ class EscrowCourt(gl.Contract):
         return int(record["amount"]) * int(milestone["share_bps"]) // BPS_DENOMINATOR
 
     def _refresh_job_status(self, record: dict) -> None:
-        settled = 0
+        waiting = 0
         for milestone in record["milestones"]:
-            if milestone["status"] in ("released", "settled"):
-                settled += 1
-        if settled == len(record["milestones"]):
+            if milestone["status"] not in TERMINAL_MILESTONE_STATUSES:
+                waiting += 1
+        if waiting == 0:
             record["status"] = "completed"
+
+    def _renew_pending_deadlines(self, record: dict, now: int) -> None:
+        """Restart the submission clock for milestones still awaiting delivery.
+
+        Settling one milestone means work is progressing, so the freelancer gets
+        a full window again for whatever is left. Without this a long review on
+        an early milestone could quietly run out the clock on a later one.
+
+        A deadline that already lapsed is deliberately left untouched, so an
+        overdue milestone stays reclaimable instead of being pushed further out.
+        """
+        for milestone in record["milestones"]:
+            if milestone["status"] != "pending":
+                continue
+            current = int(milestone.get("due_at", 0))
+            if current > 0 and current <= now:
+                continue
+            milestone["due_at"] = now + int(self.submit_window)
+
+    def _settle_timeout(self, record: dict, milestone: dict, now: int) -> str:
+        """Settle a milestone whose deadline elapsed, in a deterministic way.
+
+        The outcome depends only on the state the milestone was waiting in, so
+        the escrow always moves and neither party can strand it:
+          - pending   -> the freelancer never delivered, the client is refunded
+          - submitted -> the client never reviewed, the freelancer is paid
+          - disputed  -> adjudication never settled it, the share is split evenly
+        """
+        status = milestone["status"]
+        amount = self._milestone_amount(record, milestone)
+
+        if status == "pending":
+            resolution = "refund"
+            freelancer_cut = 0
+            self._credit(record["client"], amount)
+            self._bump(record["freelancer"], "refunded")
+            reasoning = (
+                "The freelancer did not submit this milestone before the "
+                "submission window closed, so the escrow share returns to the client."
+            )
+        elif status == "submitted":
+            resolution = "release"
+            freelancer_cut = amount
+            self._credit(record["freelancer"], amount)
+            self._bump(record["freelancer"], "released")
+            reasoning = (
+                "The client neither approved nor disputed this milestone before "
+                "the review window closed, so the freelancer is paid in full."
+            )
+        else:
+            resolution = "split"
+            freelancer_cut = amount // 2
+            self._credit(record["freelancer"], freelancer_cut)
+            self._credit(record["client"], amount - freelancer_cut)
+            self._bump(record["freelancer"], "split")
+            reasoning = (
+                "This dispute was not adjudicated before the ruling window "
+                "closed, so the escrow share is split evenly to release the funds."
+            )
+
+        milestone["status"] = "expired"
+        milestone["resolution"] = resolution
+        milestone["ruling"] = {
+            "result": resolution,
+            "source": "timeout",
+            "elapsed_window": status,
+            "deadline": int(milestone.get("due_at", 0)),
+            "resolved_at": now,
+            "freelancer_cut": freelancer_cut,
+            "client_cut": amount - freelancer_cut,
+            "reasoning": reasoning,
+        }
+        return resolution
 
     # ------------------------------------------------------------------- writes
 
@@ -336,6 +490,7 @@ class EscrowCourt(gl.Contract):
         job_id = self.next_job_id
         self.next_job_id = job_id + 1
 
+        now = _now()
         record = {
             "id": int(job_id),
             "client": str(gl.message.sender_address).lower(),
@@ -347,6 +502,8 @@ class EscrowCourt(gl.Contract):
             "escrowed": amount,
             "milestones": milestones,
             "status": "open",
+            "created_at": now,
+            "accept_due_at": now + int(self.accept_window),
         }
         self._save_job(job_id, record)
         return job_id
@@ -361,8 +518,11 @@ class EscrowCourt(gl.Contract):
         if freelancer == record["client"]:
             raise gl.vm.UserError("The client cannot accept their own job")
 
+        now = _now()
         record["freelancer"] = freelancer
         record["status"] = "active"
+        # Delivery clock starts now for every milestone the freelancer owes.
+        self._renew_pending_deadlines(record, now)
         self._save_job(job_id, record)
 
     @gl.public.write
@@ -377,6 +537,28 @@ class EscrowCourt(gl.Contract):
         self._credit(record["client"], int(record["amount"]))
         record["escrowed"] = 0
         record["status"] = "cancelled"
+        self._save_job(job_id, record)
+
+    @gl.public.write
+    def expire_open_job(self, job_id: u256) -> None:
+        """Refund a job nobody ever accepted once its accept window closes.
+
+        Permissionless on purpose: the refund always goes to the client, so
+        anyone can finalise an abandoned job and the escrow never sits idle
+        waiting for a party that has walked away.
+        """
+        record = self._load_job(job_id)
+        if record["status"] != "open":
+            raise gl.vm.UserError("Only an open job can expire")
+
+        now = _now()
+        deadline = int(record.get("accept_due_at", 0))
+        if now < deadline:
+            raise gl.vm.UserError("The accept window has not closed yet")
+
+        self._credit(record["client"], int(record["amount"]))
+        record["escrowed"] = 0
+        record["status"] = "expired"
         self._save_job(job_id, record)
 
     @gl.public.write
@@ -425,6 +607,9 @@ class EscrowCourt(gl.Contract):
         milestone["evidence_url"] = evidence_url
         milestone["submission_note"] = note
         milestone["status"] = "submitted"
+        # The client now has a bounded window to approve or dispute; if it
+        # lapses the freelancer is paid rather than left waiting forever.
+        milestone["due_at"] = _now() + int(self.review_window)
         self._save_job(job_id, record)
 
     @gl.public.write
@@ -452,6 +637,7 @@ class EscrowCourt(gl.Contract):
         }
         self._bump(record["freelancer"], "released")
 
+        self._renew_pending_deadlines(record, _now())
         self._refresh_job_status(record)
         self._save_job(job_id, record)
 
@@ -474,6 +660,9 @@ class EscrowCourt(gl.Contract):
 
         milestone["dispute_claim"] = claim
         milestone["status"] = "disputed"
+        # Adjudication is permissionless, but if it never settles within this
+        # window the share is split so the funds cannot be frozen by a dispute.
+        milestone["due_at"] = _now() + int(self.ruling_window)
         self._bump(record["client"], "disputes_raised")
         self._save_job(job_id, record)
 
@@ -669,6 +858,35 @@ Respond with ONLY a JSON object, no prose and no markdown:
         }
         self._bump(record["freelancer"], REPUTATION_KEYS[resolution])
 
+        self._renew_pending_deadlines(record, _now())
+        self._refresh_job_status(record)
+        self._save_job(job_id, record)
+
+    @gl.public.write
+    def resolve_stalled_milestone(self, job_id: u256, milestone_id: str) -> None:
+        """Settle a milestone whose deadline elapsed so escrow can never freeze.
+
+        A milestone is only ever waiting on one party: the freelancer (to
+        deliver), the client (to review), or adjudication (to rule). Each of
+        those states carries a deadline, and this method finalises whichever
+        one lapsed. It is permissionless and the outcome is fixed by the state
+        alone, so neither party can stall the other out of their money.
+        """
+        record = self._load_job(job_id)
+        if record["status"] != "active":
+            raise gl.vm.UserError("The job is not active")
+
+        milestone = self._find_milestone(record, milestone_id.strip())
+        if milestone["status"] not in WAITING_MILESTONE_STATUSES:
+            raise gl.vm.UserError("This milestone is already settled")
+
+        now = _now()
+        deadline = int(milestone.get("due_at", 0))
+        if now < deadline:
+            raise gl.vm.UserError("The milestone deadline has not passed yet")
+
+        self._settle_timeout(record, milestone, now)
+        self._renew_pending_deadlines(record, now)
         self._refresh_job_status(record)
         self._save_job(job_id, record)
 
@@ -698,6 +916,19 @@ Respond with ONLY a JSON object, no prose and no markdown:
     @gl.public.view
     def get_ledger(self) -> str:
         return json.dumps(self._all_ledger(), sort_keys=True)
+
+    @gl.public.view
+    def get_terms(self) -> str:
+        """The published recovery windows, in seconds, for this escrow service."""
+        return json.dumps(
+            {
+                "accept_window": int(self.accept_window),
+                "submit_window": int(self.submit_window),
+                "review_window": int(self.review_window),
+                "ruling_window": int(self.ruling_window),
+            },
+            sort_keys=True,
+        )
 
     @gl.public.view
     def total_jobs(self) -> u256:

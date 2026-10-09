@@ -26,6 +26,12 @@ EVIDENCE_URL = "https://www.iana.org/help/example-domains"
 # when opening the job; the contract holds it until a milestone settles.
 ESCROW = 10**15
 
+# Recovery windows in seconds, passed to the constructor. These are the
+# production defaults: 7 days to accept, 14 days to deliver, 7 days to review,
+# 7 days to adjudicate a dispute.
+DAY = 24 * 60 * 60
+WINDOWS = [7 * DAY, 14 * DAY, 7 * DAY, 7 * DAY]
+
 BRIEF = (
     "Build a static landing page for a documentation example domain. The page must be "
     "served over HTTPS, present a clear top-level heading, and list at least three "
@@ -135,7 +141,7 @@ def main():
     print("freelancer:", freelancer.address)
 
     print("\n== deploy ==")
-    deploy_tx = client.deploy_contract(code=code)
+    deploy_tx = client.deploy_contract(code=code, args=WINDOWS)
     receipt = finalize(client, deploy_tx, "deploy")
     address = field(receipt, "to_address", "recipient")
     address = as_hex(address)
